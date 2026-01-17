@@ -1,11 +1,15 @@
-# nestjs-log-decorator
+# NestJS Log Decorator
 
 [![npm version](https://img.shields.io/npm/v/nestjs-log-decorator.svg)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://opensource.org/licenses/AGPL-3.0)
 
 TypeScript decorators that eliminate try-catch logging boilerplate from NestJS service methods. Automatically logs method call invocation, on return or errors.
 
-By defult uses structured output, and prettifies Axios errors.
+*Key Features*:
+
+- By defult uses structured output
+- Prettifies Axios errors
+- Zero dependencies
 
 ## Quick Start
 
@@ -246,6 +250,7 @@ class ApiService {
 ### `args` — Custom Argument Formatting
 
 Control what arguments are logged. Useful for:
+
 - Excluding large objects from logs
 - Hiding sensitive data (passwords, tokens)
 - Logging only specific arguments
@@ -280,6 +285,7 @@ class SyncService {
 ```
 
 **Output:**
+
 ```
 [SyncService] { method: 'syncData', state: 'success', args: { id: 123 } }
 [SyncService] { method: 'processTransaction', state: 'success', args: { userId: 1, txId: 'tx_abc' } }
@@ -348,6 +354,7 @@ processPayment(amount: number) {
 ```
 
 **Log Output:**
+
 ```json
 {
   method: 'processPayment',
@@ -374,6 +381,7 @@ async fetchData(url: string) {
 ```
 
 **Prettified Axios Error Output:**
+
 ```typescript
 {
   method: 'fetchData',

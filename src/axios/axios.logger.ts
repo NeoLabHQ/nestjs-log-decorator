@@ -1,4 +1,5 @@
-import { type AxiosRequestConfig, type AxiosResponse, isAxiosError } from 'axios';
+import type { AxiosRequestConfig, AxiosResponse } from './axios.stub';
+import { isAxiosError } from './axios.stub';
 
 export function prettifyAxiosError(error: unknown): unknown {
   if (!isAxiosError(error)) {
@@ -14,10 +15,6 @@ export function prettifyAxiosError(error: unknown): unknown {
   };
 }
 
-interface RequestWithPath extends AxiosRequestConfig {
-  path?: unknown;
-}
-
 function prettifyRequest(request?: AxiosRequestConfig): object | string {
   if (!request) {
     return 'Empty request';
@@ -26,7 +23,7 @@ function prettifyRequest(request?: AxiosRequestConfig): object | string {
     method: request.method,
     url: request.url,
     baseURL: request.baseURL,
-    path: (request as RequestWithPath).path,
+    path: request.path,
     headers: request.headers,
     data: request.data as unknown,
     params: request.params as unknown,

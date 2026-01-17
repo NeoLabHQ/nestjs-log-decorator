@@ -41,6 +41,6 @@
     "vitest": "^4.0.16"
   },
   "peerDependencies": {
-    "@nestjs/common": "^11.1.12"
+    "@nestjs/common": "*"
   }
 }
