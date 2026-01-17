@@ -1,0 +1,42 @@
+{
+  "name": "nest-http-client",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Zero-configuration resilience and transient-fault-handling HTTP Client that wraps official @nestjs/axios library",
+  "author": "Vlad Goncharov <leovs010@gmail.com>",
+  "license": "AGPL-3.0",
+  "homepage": "https://github.com/neolabhq/nest-http-client#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neolabhq/nest-http-client.git"
+  },
+  "bugs": {
+    "url": "https://github.com/neolabhq/nest-http-client/issues"
+  },
+  "exports": {
+    ".": "./dist/index.mjs",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
+    "dev": "concurrently -c auto --names build,test npm:build:watch npm:test",
+    "test": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.3",
+    "bumpp": "^10.3.2",
+    "concurrently": "^9.2.1",
+    "tsdown": "^0.18.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.16"
+  }
+}

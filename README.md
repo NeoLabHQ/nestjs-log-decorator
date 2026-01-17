@@ -1,2 +1,10 @@
-# nestjs-log-decorator
-Decorator that remove try catch boilerplate logging from NestJS service methods
+# NestJS Log Decorator
+
+Decorator that removes try catch boilerplate logging from NestJS service methods
+
+## Installation
+
+```bash
+npm install nestjs-log-decorator
+```
+
