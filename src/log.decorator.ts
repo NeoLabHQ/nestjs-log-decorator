@@ -3,9 +3,8 @@ import { applyToMethod } from './decorate/applyToMethod';
 import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
 import type { Loggable } from './LogWrapper';
 
-interface LoggableConstructor {
-  new (...args: unknown[]): Loggable;
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LoggableConstructor = new (...args: any[]) => Loggable;
 
 /**
  * Decorator function that can be applied to classes or methods.
@@ -16,7 +15,7 @@ interface LogDecorator {
   /** Class decorator - enforces that class instances have a `logger` property */
   <T extends LoggableConstructor>(target: T): T;
   /** Method decorator - no compile-time constraint on `this` */
-  (target: object, propertyKey?: unknown, descriptor?: unknown): PropertyDescriptor;
+  (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor;
 }
 
 /**

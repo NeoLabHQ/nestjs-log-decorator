@@ -39,6 +39,7 @@ export class LogWrapper {
   }
 }
 
+/** If you see it, then you probably forgot to add `readonly logger = new Logger(YourClass.name)` to your class */
 export interface Loggable {
   logger: Logger;
 }
