@@ -7,7 +7,6 @@
 <h1>NestJS Log Decorator</h1>
 
 ![Build Status](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yaml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/neolabhq/nestjs-log-decorator/badge.svg?branch=main)](https://coveralls.io/github/neolabhq/nestjs-log-decorator?branch=main)
 [![npm version](https://img.shields.io/npm/v/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![NPM Downloads](https://img.shields.io/npm/dw/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
@@ -16,12 +15,9 @@
 TypeScript decorators that eliminate logging boilerplate from NestJS applications.
 
 [Quick Start](#quick-start) •
-[Complete Example](#complete-example) •
 [How It Works](#how-it-works) •
 [Usage](#usage) •
 [Options](#options) •
-[Log Format](#log-format) •
-[Error Handling](#error-handling) •
 [API Reference](#api-reference) •
 [Advanced Example](#advanced-example)
 
@@ -29,7 +25,7 @@ TypeScript decorators that eliminate logging boilerplate from NestJS application
 
 ## Description
 
-Decorators allow to replace try-catch logging pattern from NestJS service methods, by automatically logging methods invocation, on return or error.
+`@Log()` decorator replaces try-catch logging pattern from NestJS service methods, by automatically logging methods invocation, on return or error.
 
 **Key Features**
 
@@ -108,7 +104,7 @@ const result = await resultPromise;
 // [UserService] { method: 'createUser', state: 'success', args: { name: 'John' } }
 ```
 
-## Complete Example
+### Complete Example
 
 After installation, no additional configuration is needed, just make sure that your class has a `logger` property, which implements default NestJS Logger interface.
 
