@@ -25,7 +25,7 @@ TypeScript decorators that eliminate logging boilerplate from NestJS application
 
 ## Description
 
-`@Log()` decorator replaces try-catch logging pattern from NestJS service methods, by automatically logging methods invocation, on return or error.
+`@Log()` decorator replaces the try-catch logging pattern in NestJS service methods by automatically logging method invocation on return or error.
 
 **Key Features**
 
@@ -47,7 +47,7 @@ import { Logger } from '@nestjs/common';
 import { Log } from 'nestjs-log-decorator';
 
 class UserService {
-  private readonly logger = new Logger(UserService.name);
+  readonly logger = new Logger(UserService.name);
 
   @Log()
   createUser(name: string, email: string) {
@@ -57,7 +57,7 @@ class UserService {
 
 ```
 
-Once a service method is called, it will log the method call invocation with all arguments.
+Once a service method is called, it will log the method invocation with all arguments.
 
 ```typescript
 const result = service.createUser('John', 'john@example.com');
@@ -106,7 +106,7 @@ const result = await resultPromise;
 
 ### Complete Example
 
-After installation, no additional configuration is needed, just make sure that your class has a `logger` property, which implements default NestJS Logger interface.
+After installation, no additional configuration is needed, just make sure that your class has a public `logger` property that implements the default NestJS Logger interface.
 
 ```typescript
 import { Logger } from '@nestjs/common';
@@ -115,7 +115,7 @@ import { Log } from 'nestjs-log-decorator';
 
 class PaymentService {
   // `logger` property will be used by decorator
-  private readonly logger = new Logger(PaymentService.name);
+  readonly logger = new Logger(PaymentService.name);
 
   @Log()
   async processPayment(amount: number, currency: string) {
@@ -129,6 +129,8 @@ class PaymentService {
   }
 }
 ```
+
+The `logger` property is public due to TypeScript validation limitations. TS cannot check if a private property is valid, but it should still work even if the property is private.
 
 ## How It Works
 
@@ -181,7 +183,7 @@ Apply `@Log()` to specific methods for granular control:
 
 ```typescript
 class DataService {
-  private readonly logger = new Logger(DataService.name);
+  readonly logger = new Logger(DataService.name);
 
   @Log()
   async fetchData(id: number) {
@@ -207,7 +209,7 @@ import { Log } from 'nestjs-log-decorator';
 @Log()
 @Injectable()
 class PaymentService {
-  private readonly logger = new Logger(PaymentService.name);
+  readonly logger = new Logger(PaymentService.name);
 
   processPayment(amount: number, currency: string) {
     // Automatically logged on success or error
@@ -230,7 +232,7 @@ import { Log, NoLog } from 'nestjs-log-decorator';
 
 @Log()
 class UserService {
-  private readonly logger = new Logger(UserService.name);
+  readonly logger = new Logger(UserService.name);
 
   createUser(name: string) {
     // Logged
@@ -266,7 +268,7 @@ Class-level with `onInvoke`:
 ```typescript
 @Log({ onInvoke: true })
 class ApiService {
-  private readonly logger = new Logger(ApiService.name);
+  readonly logger = new Logger(ApiService.name);
   
   // All methods will log invocation + completion
 }
@@ -287,7 +289,7 @@ interface LargePayload {
 }
 
 class SyncService {
-  private readonly logger = new Logger(SyncService.name);
+  readonly logger = new Logger(SyncService.name);
 
   // Only log the ID, exclude the large payload
   @Log({ args: (id: number, _payload: LargePayload) => ({ id }) })
@@ -469,11 +471,11 @@ import { Log, NoLog } from 'nestjs-log-decorator';
 @Log()
 @Injectable()
 export class OrderService {
-  private readonly logger = new Logger(OrderService.name);
+  readonly logger = new Logger(OrderService.name);
 
   constructor(
-    private readonly orderRepo: OrderRepository,
-    private readonly paymentGateway: PaymentGateway,
+    readonly orderRepo: OrderRepository,
+    readonly paymentGateway: PaymentGateway,
   ) {}
 
   // Logged with all args
