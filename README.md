@@ -481,7 +481,3 @@ export class OrderService {
   }
 }
 ```
-
-## License
-
-[AGPL-3.0](LICENSE) © [Vlad Goncharov](https://github.com/leovs09)
