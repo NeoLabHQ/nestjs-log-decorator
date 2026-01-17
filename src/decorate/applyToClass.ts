@@ -1,5 +1,5 @@
 import { applyToMethod } from './applyToMethod';
-import { LogOptions, NO_LOG_METADATA_KEY } from './types';
+import { type LogOptions, NO_LOG_METADATA_KEY } from '../types';
 
 interface Constructor {
   prototype: Record<string, unknown>;

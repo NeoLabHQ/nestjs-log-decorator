@@ -1,6 +1,6 @@
 import { Logger } from '@nestjs/common';
 
-import { prettifyAxiosError } from './axios.logger';
+import { prettifyAxiosError } from './axios/axios.logger';
 
 /**
  * Wrapper class for logging operations with consistent format.

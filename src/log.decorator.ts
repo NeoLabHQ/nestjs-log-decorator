@@ -1,5 +1,5 @@
-import { applyToClass } from './applyToClass';
-import { applyToMethod } from './applyToMethod';
+import { applyToClass } from './decorate/applyToClass';
+import { applyToMethod } from './decorate/applyToMethod';
 import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
 
 /**

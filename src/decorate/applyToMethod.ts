@@ -1,5 +1,5 @@
-import { buildArgsObject, createLogWrapper, LogWrapper } from './LogWrapper';
-import { LogOptions } from './types';
+import { buildArgsObject, createLogWrapper, LogWrapper } from '../LogWrapper';
+import type { LogOptions } from '../types';
 
 type MethodFunction = (...args: unknown[]) => unknown;
 
