@@ -6,7 +6,7 @@
 
 <h1>NestJS Log Decorator</h1>
 
-![Build Status](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yml/badge.svg)
+![Build Status](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yaml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/neolabhq/nestjs-log-decorator/badge.svg?branch=main)](https://coveralls.io/github/neolabhq/nestjs-log-decorator?branch=main)
 [![npm version](https://img.shields.io/npm/v/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
