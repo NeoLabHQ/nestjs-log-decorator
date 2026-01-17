@@ -1,7 +1,21 @@
-# NestJS Log Decorator
+<p align="center">
+  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+</p>
 
-[![npm version](https://img.shields.io/npm/v/nestjs-log-decorator.svg)](https://www.npmjs.com/package/nestjs-log-decorator)
+<h1 align="center">NestJS Log Decorator</h1>
+
+<p align="center">
+
+[![CI](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yml/badge.svg)](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/neolabhq/nestjs-log-decorator/badge.svg?branch=main)](https://coveralls.io/github/neolabhq/nestjs-log-decorator?branch=main)
+[![npm version](https://img.shields.io/npm/v/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
+[![NPM Downloads](https://img.shields.io/npm/dw/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://opensource.org/licenses/AGPL-3.0)
+
+</p>
+
+## Description
 
 TypeScript decorators that eliminate try-catch logging boilerplate from NestJS service methods. Automatically logs method call invocation, on return or errors.
 
@@ -11,6 +25,12 @@ TypeScript decorators that eliminate try-catch logging boilerplate from NestJS s
 - Prettifies Axios errors
 - Zero configuration
 - Zero dependencies
+
+## Installation
+
+```bash
+npm install nestjs-log-decorator @nestjs/common
+```
 
 ## Quick Start
 
@@ -76,13 +96,9 @@ const result = await resultPromise;
 // [UserService] { method: 'createUser', state: 'success', args: { name: 'John' } }
 ```
 
-## Installation
+## Complete Example
 
-```bash
-npm install nestjs-log-decorator @nestjs/common
-```
-
-No additional configuration is needed, just make sure that your class has a `logger` property, which implements default NestJS Logger interface.
+After installation, no additional configuration is needed, just make sure that your class has a `logger` property, which implements default NestJS Logger interface.
 
 ```typescript
 import { Logger } from '@nestjs/common';
@@ -436,7 +452,7 @@ import { Log, NoLog, LogOptions, Loggable, isLoggable } from 'nestjs-log-decorat
 | `Loggable` | Interface | Interface for classes with a `logger` property |
 | `isLoggable` | Function | Type guard to check if instance has logger |
 
-## Complete Example
+## Advanced Example
 
 ```typescript
 import { Injectable, Logger } from '@nestjs/common';
