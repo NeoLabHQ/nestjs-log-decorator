@@ -2,6 +2,7 @@ import { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { expect, describe, it, vi } from 'vitest'
 
 import { Log, NoLog } from '../src/log.decorator';
+import type { Logger } from '@nestjs/common';
 
 describe('Log Decorator', () => {
   const createMockLogger = () => ({
@@ -14,7 +15,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log({ onInvoke: true })
         loadData(id: number, params: Record<string, unknown>) {
@@ -36,7 +37,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         loadData(id: number, params: Record<string, unknown>) {
@@ -64,7 +65,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         loadData(id: number) {
@@ -87,7 +88,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         loadData(_id: number) {
@@ -110,7 +111,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         getData() {
@@ -132,7 +133,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         processData(id: number, name: string, active: boolean) {
@@ -154,7 +155,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log({ args: (id: number, name: string, active: boolean) => `${id} ${name} ${active}` })
         processData(id: number, name: string, active: boolean) {
@@ -178,7 +179,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log({ onInvoke: true })
         async loadData(id: number, params: Record<string, unknown>) {
@@ -200,7 +201,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         async loadData(id: number) {
@@ -223,7 +224,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         async loadData(_id: number) {
@@ -248,7 +249,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         processData(value: unknown) {
@@ -277,7 +278,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         processArray(items: number[]) {
@@ -299,7 +300,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         method1(id: number) {
@@ -340,7 +341,7 @@ describe('Log Decorator', () => {
       const service = new TestService();
 
       expect(() => service.loadData(1)).toThrow(
-        'Logger not found in TestService. Please add: private readonly logger = new Logger(TestService.name)',
+        'Logger not found in TestService. Please add: readonly logger = new Logger(TestService.name)',
       );
     });
 
@@ -348,7 +349,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         fetchData(_url: string) {
@@ -383,7 +384,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         processData(_id: number) {
@@ -409,7 +410,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @Log()
         async fetchData(_url: string) {
@@ -444,7 +445,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         method1(id: number) {
           return { id };
@@ -476,7 +477,7 @@ describe('Log Decorator', () => {
 
       @Log({ onInvoke: true })
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         method1(id: number) {
           return { id };
@@ -507,7 +508,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         method1(_id: number) {
           throw new Error('Error in method1');
@@ -541,7 +542,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         async method1(id: number) {
           return await Promise.resolve({ id });
@@ -575,7 +576,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         constructor(private readonly value: string) {
           // Constructor should not be logged
@@ -605,7 +606,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         method1(id: number) {
           return { id };
@@ -654,7 +655,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         method1(id: number) {
           return { id };
@@ -702,7 +703,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         async method1(id: number) {
           return await Promise.resolve({ id });
@@ -738,7 +739,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @NoLog()
         throwError() {
@@ -760,7 +761,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         method1(id: number) {
           return { id };
@@ -805,7 +806,7 @@ describe('Log Decorator', () => {
       const mockLogger = createMockLogger();
 
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @NoLog()
         method1(id: number) {
@@ -825,7 +826,7 @@ describe('Log Decorator', () => {
 
       @Log()
       class TestService {
-        private readonly logger = mockLogger;
+        readonly logger = mockLogger as unknown as Logger;
 
         @NoLog()
         @Log({ onInvoke: true })

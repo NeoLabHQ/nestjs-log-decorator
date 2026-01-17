@@ -1,6 +1,23 @@
 import { applyToClass } from './decorate/applyToClass';
 import { applyToMethod } from './decorate/applyToMethod';
 import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
+import type { Loggable } from './LogWrapper';
+
+interface LoggableConstructor {
+  new (...args: unknown[]): Loggable;
+}
+
+/**
+ * Decorator function that can be applied to classes or methods.
+ * Uses overloads to provide type checking for class decorators while
+ * keeping method decorators flexible.
+ */
+interface LogDecorator {
+  /** Class decorator - enforces that class instances have a `logger` property */
+  <T extends LoggableConstructor>(target: T): T;
+  /** Method decorator - no compile-time constraint on `this` */
+  (target: object, propertyKey?: unknown, descriptor?: unknown): PropertyDescriptor;
+}
 
 /**
  * Unified decorator that works on both classes and methods.
@@ -48,7 +65,7 @@ import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
  * // Class-level usage - logs all methods
  * @Log()
  * class UserService {
- *   private readonly logger = new Logger(UserService.name)
+ *   readonly logger = new Logger(UserService.name)
  *
  *   createUser(name: string, email: string) {
  *     return { id: 1, name, email }
@@ -62,7 +79,7 @@ import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
  * @example
  * // Method-level usage - logs only specific method
  * class DataService {
- *   private readonly logger = new Logger(DataService.name)
+ *   readonly logger = new Logger(DataService.name)
  *
  *   @Log({ onInvoke: true })
  *   async fetchData(id: number) {
@@ -79,7 +96,7 @@ import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
  * @example
  * // Error handling with regular errors
  * class PaymentService {
- *   private readonly logger = new Logger(PaymentService.name)
+ *   readonly logger = new Logger(PaymentService.name)
  *
  *   @Log()
  *   processPayment(amount: number, currency: string) {
@@ -96,7 +113,7 @@ import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
  * @example
  * // Error handling with Axios errors (automatically prettified)
  * class ApiService {
- *   private readonly logger = new Logger(ApiService.name)
+ *   readonly logger = new Logger(ApiService.name)
  *
  *   @Log()
  *   async fetchData(url: string) {
@@ -122,7 +139,7 @@ import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
  * @example
  * // Custom argument formatting - exclude large objects from logs
  * class SyncService {
- *   private readonly logger = new Logger(SyncService.name)
+ *   readonly logger = new Logger(SyncService.name)
  *
  *   @Log({ args: (loanId: number) => ({ loanId }) })
  *   async syncLoan(loanId: number, loanData?: CloudbankinLoan) {
@@ -147,26 +164,26 @@ import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
  *
  * @returns Decorator function that can be applied to classes or methods
  */
-interface Constructor {
-  prototype: Record<string, unknown>;
-}
-
-export const Log = <TArgs extends unknown[]>(options: LogOptions<TArgs> = {}) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (...args: unknown[]): any => {
+export const Log = <TArgs extends unknown[]>(options: LogOptions<TArgs> = {}): LogDecorator => {
+  // Cast to LogDecorator to enable overloaded signatures
+  return ((
+    target: LoggableConstructor | object,
+    propertyKey?: string,
+    descriptor?: PropertyDescriptor,
+  ): LoggableConstructor | PropertyDescriptor | void => {
     // Class decorator receives 1 argument (constructor)
-    if (args.length === 1) {
-      applyToClass(args[0] as Constructor, options as LogOptions);
-      return;
+    if (propertyKey === undefined) {
+      applyToClass(target as LoggableConstructor, options as LogOptions);
+      return target as LoggableConstructor;
     }
 
     // Method decorator receives 3 arguments (target, propertyKey, descriptor)
-    if (args.length === 3) {
-      return applyToMethod(args[0] as Record<string, unknown>, args[1] as string, args[2] as PropertyDescriptor, options as LogOptions);
+    if (descriptor !== undefined) {
+      return applyToMethod(target, propertyKey, descriptor, options as LogOptions);
     }
 
     throw new Error('Log decorator can only be applied to classes or methods');
-  };
+  }) as LogDecorator;
 };
 
 /**
@@ -180,7 +197,7 @@ export const Log = <TArgs extends unknown[]>(options: LogOptions<TArgs> = {}) =>
  * @example
  * @Log()
  * class UserService {
- *   private readonly logger = new Logger(UserService.name)
+ *   readonly logger = new Logger(UserService.name)
  *
  *   createUser(name: string) {
  *     // This will be logged
@@ -198,7 +215,7 @@ export const Log = <TArgs extends unknown[]>(options: LogOptions<TArgs> = {}) =>
  * // With multiple @NoLog() methods
  * @Log()
  * class DataService {
- *   private readonly logger = new Logger(DataService.name)
+ *   readonly logger = new Logger(DataService.name)
  *
  *   fetchData(id: number) {
  *     // Logged

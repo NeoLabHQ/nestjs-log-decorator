@@ -59,7 +59,7 @@ export const createLogWrapper = (
 ): LogWrapper => {
   // Validate logger exists
   if (!isLoggable(instance)) {
-    throw new Error(`Logger not found in ${className}. Please add: private readonly logger = new Logger(${className}.name)`);
+    throw new Error(`Logger not found in ${className}. Please add: readonly logger = new Logger(${className}.name)`);
   }
 
   return new LogWrapper(instance.logger, methodName, argsObject);
