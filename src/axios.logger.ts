@@ -1,4 +1,4 @@
-import { AxiosRequestConfig, AxiosResponse, isAxiosError } from 'axios';
+import { type AxiosRequestConfig, type AxiosResponse, isAxiosError } from 'axios';
 
 export function prettifyAxiosError(error: unknown): unknown {
   if (!isAxiosError(error)) {

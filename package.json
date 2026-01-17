@@ -1,17 +1,17 @@
 {
-  "name": "nest-http-client",
+  "name": "nestjs-log-decorator",
   "type": "module",
   "version": "0.1.0",
-  "description": "Zero-configuration resilience and transient-fault-handling HTTP Client that wraps official @nestjs/axios library",
+  "description": "Decorator that removes try catch boilerplate logging from NestJS service methods",
   "author": "Vlad Goncharov <leovs010@gmail.com>",
   "license": "AGPL-3.0",
-  "homepage": "https://github.com/neolabhq/nest-http-client#readme",
+  "homepage": "https://github.com/neolabhq/nestjs-log-decorator#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neolabhq/nest-http-client.git"
+    "url": "git+https://github.com/neolabhq/nestjs-log-decorator.git"
   },
   "bugs": {
-    "url": "https://github.com/neolabhq/nest-http-client/issues"
+    "url": "https://github.com/neolabhq/nestjs-log-decorator/issues"
   },
   "exports": {
     ".": "./dist/index.mjs",
@@ -33,10 +33,14 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
+    "axios": "^1.13.2",
     "bumpp": "^10.3.2",
     "concurrently": "^9.2.1",
     "tsdown": "^0.18.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.1.12"
   }
 }
