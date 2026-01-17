@@ -5,10 +5,11 @@
 
 TypeScript decorators that eliminate try-catch logging boilerplate from NestJS service methods. Automatically logs method call invocation, on return or errors.
 
-*Key Features*:
+**Key Features**
 
 - By defult uses structured output
 - Prettifies Axios errors
+- Zero configuration
 - Zero dependencies
 
 ## Quick Start
