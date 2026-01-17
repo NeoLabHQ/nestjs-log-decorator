@@ -2,26 +2,38 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
 
-<h1 align="center">NestJS Log Decorator</h1>
+<div align="center">
 
-<p align="center">
+<h1>NestJS Log Decorator</h1>
 
-[![CI](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yml/badge.svg)](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yml)
+![Build Status](https://github.com/neolabhq/nestjs-log-decorator/actions/workflows/ci.yml/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/neolabhq/nestjs-log-decorator/badge.svg?branch=main)](https://coveralls.io/github/neolabhq/nestjs-log-decorator?branch=main)
 [![npm version](https://img.shields.io/npm/v/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![Bundle Size](https://img.shields.io/bundlephobia/minzip/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![NPM Downloads](https://img.shields.io/npm/dw/nestjs-log-decorator)](https://www.npmjs.com/package/nestjs-log-decorator)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://opensource.org/licenses/AGPL-3.0)
 
-</p>
+TypeScript decorators that eliminate logging boilerplate from NestJS applications.
+
+[Quick Start](#quick-start) •
+[Complete Example](#complete-example) •
+[How It Works](#how-it-works) •
+[Usage](#usage) •
+[Options](#options) •
+[Log Format](#log-format) •
+[Error Handling](#error-handling) •
+[API Reference](#api-reference) •
+[Advanced Example](#advanced-example)
+
+</div>
 
 ## Description
 
-TypeScript decorators that eliminate try-catch logging boilerplate from NestJS service methods. Automatically logs method call invocation, on return or errors.
+Decorators allow to replace try-catch logging pattern from NestJS service methods, by automatically logging methods invocation, on return or error.
 
 **Key Features**
 
-- By defult uses structured output
+- By default uses structured output
 - Prettifies Axios errors
 - Zero configuration
 - Zero dependencies
@@ -49,7 +61,7 @@ class UserService {
 
 ```
 
-Once service method is called, it will log the method call invocation, with all arguments.
+Once a service method is called, it will log the method call invocation with all arguments.
 
 ```typescript
 const result = service.createUser('John', 'john@example.com');
@@ -59,7 +71,7 @@ const result = service.createUser('John', 'john@example.com');
 
 ### Error Logging
 
-If method throws an error, by default decorator logs and throws it, preserving original stack trace.
+If a method throws an error, by default the decorator logs and throws it, preserving the original stack trace.
 
 ```typescript
 @Log()
@@ -78,7 +90,7 @@ const result = service.createUser('John');
 
 ### Invocation Logging
 
-If you want to log method invocation, you can use `onInvoke` option.
+If you want to log the method invocation, you can use the `onInvoke` option.
 
 ```typescript
 @Log({ onInvoke: true })
@@ -190,7 +202,7 @@ class DataService {
 
 ### Class-Level Decorator
 
-If you want to log all methods in class, use `@Log()` decorator on it definition:
+If you want to log all methods in a class, use the `@Log()` decorator on its definition:
 
 ```typescript
 import { Logger } from '@nestjs/common';
