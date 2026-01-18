@@ -27,7 +27,7 @@
     "dev": "concurrently -c auto --names build,test npm:build:watch npm:test",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
