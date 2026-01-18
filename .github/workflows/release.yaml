@@ -48,5 +48,6 @@ jobs:
           semantic_version: 25
         env:
           # Created following https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
+          # Commit requires to set Bypass list to: repository admin equals ALWAYS ALLOW
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
