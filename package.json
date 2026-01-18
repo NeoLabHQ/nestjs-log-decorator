@@ -4,13 +4,13 @@
   "description": "Decorator that removes try catch boilerplate logging from NestJS service methods",
   "author": "Vlad Goncharov <leovs010@gmail.com>",
   "license": "AGPL-3.0",
-  "homepage": "https://github.com/neolabhq/nestjs-log-decorator#readme",
+  "homepage": "https://github.com/NeoLabHQ/nestjs-log-decorator#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neolabhq/nestjs-log-decorator.git"
+    "url": "https://github.com/NeoLabHQ/nestjs-log-decorator"
   },
   "bugs": {
-    "url": "https://github.com/neolabhq/nestjs-log-decorator/issues"
+    "url": "https://github.com/NeoLabHQ/nestjs-log-decorator/issues"
   },
   "exports": {
     ".": "./dist/index.cjs",
