@@ -9,6 +9,7 @@ permissions:
   contents: write
 
 jobs:
+  # Based on https://semantic-release.gitbook.io/semantic-release/recipes/ci-configurations/github-actions#node-project-configuration
   release:
     name: Release
     runs-on: ubuntu-latest
@@ -17,6 +18,7 @@ jobs:
       contents: write # to be able to publish a GitHub release
       issues: write # to be able to comment on released issues
       pull-requests: write # to be able to comment on released pull requests
+      # Uses trusted publishing for release: https://docs.npmjs.com/trusted-publishers
       id-token: write # to enable use of OIDC for trusted publishing and npm provenance
 
     steps:
@@ -26,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           registry-url: 'https://registry.npmjs.org'
 
@@ -42,5 +44,6 @@ jobs:
         with:
           semantic_version: 25
         env:
+          # Created following https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
 
