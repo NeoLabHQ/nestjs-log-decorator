@@ -30,12 +30,24 @@ export class LogWrapper {
   }
 
   error(error: unknown): void {
-    this.logger.error({
-      method: this.method,
-      state: 'error',
-      args: this.args,
-      error: prettifyAxiosError(error),
-    });
+    try {
+      const pretifiedError = prettifyAxiosError(error)
+
+      this.logger.error({
+        method: this.method,
+        state: 'error',
+        args: this.args,
+        error: pretifiedError,
+      });
+    } catch {
+      // failed to log pretified error, log the original error
+      this.logger.error({
+        method: this.method,
+        state: 'error',
+        args: this.args,
+        error,
+      });
+    }
   }
 }
 
