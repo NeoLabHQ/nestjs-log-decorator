@@ -13,23 +13,25 @@ export class LogWrapper {
     private readonly args: string | number | Record<string, unknown> | undefined,
   ) {}
 
-  invoked(): void {
+  invoked(message?: string): void {
     this.logger.log({
       method: this.method,
       state: 'invoked',
       args: this.args,
+      ...(message ? { message } : {}),
     });
   }
 
-  success(): void {
+  success(message?: string): void {
     this.logger.log({
       method: this.method,
       state: 'success',
       args: this.args,
+      ...(message ? { message } : {}),
     });
   }
 
-  error(error: unknown): void {
+  error(error: unknown, message?: string): void {
     try {
       const pretifiedError = prettifyAxiosError(error)
 
@@ -38,6 +40,7 @@ export class LogWrapper {
         state: 'error',
         args: this.args,
         error: pretifiedError,
+        ...(message ? { message } : {}),
       });
     } catch {
       // failed to log pretified error, log the original error
@@ -46,6 +49,7 @@ export class LogWrapper {
         state: 'error',
         args: this.args,
         error,
+        ...(message ? { message } : {}),
       });
     }
   }
