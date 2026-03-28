@@ -6,8 +6,10 @@
 #   source "scripts/claude-helpers.sh"
 
 # ── Configuration defaults ──────────────────────────────────────────
-MAX_SESSION_RETRIES="${MAX_SESSION_RETRIES:-5}"
-SESSION_RETRY_WAIT="${SESSION_RETRY_WAIT:-3600}"  # 1 hour in seconds
+MAX_SESSION_RETRIES="${MAX_SESSION_RETRIES:-12}"
+SESSION_RETRY_WAIT="${SESSION_RETRY_WAIT:-3600}"    # 1 hour in seconds
+COMMAND_TIMEOUT="${COMMAND_TIMEOUT:-21600}"          # 6 hours in seconds
+PERMISSION_MODE="${PERMISSION_MODE:---permission-mode auto}"
 
 DRAFT_DIR="${DRAFT_DIR:-.specs/tasks/draft}"
 TODO_DIR="${TODO_DIR:-.specs/tasks/todo}"
@@ -32,6 +34,30 @@ describe_error_type() {
   esac
 }
 
+# ── Wait for a PID with a timeout ─────────────────────────────────
+# Returns 0 if the process exits before timeout, 1 if it times out.
+# Uses a polling loop with 1-second granularity so we can detect
+# process exit without relying on non-portable `timeout` flags.
+#
+# Args: pid, timeout_seconds
+wait_with_timeout() {
+  local pid="$1"
+  local timeout_secs="$2"
+  local elapsed=0
+
+  while [ "$elapsed" -lt "$timeout_secs" ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      # Process has exited
+      return 0
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+
+  # Still running after timeout
+  return 1
+}
+
 # ── Generic retry loop ────────────────────────────────────────────
 # Retries a caller-provided command callback on ANY non-zero exit,
 # waiting SESSION_RETRY_WAIT between attempts. The Claude CLI does not
@@ -51,6 +77,10 @@ describe_error_type() {
 # It MUST redirect its command's stderr through the stderr_file, e.g.:
 #   my_command 2> >(tee "$stderr_file" >&2)
 #
+# TIMEOUT & CHILD CLEANUP: The callback is run in the background. On
+# timeout, `pkill -P` kills all child processes (e.g. `claude`, `jq` in
+# a pipe) of the background subshell, then the subshell itself is killed.
+#
 # Args: label, callback_fn_name
 _retry_loop() {
   local label="$1"
@@ -63,7 +93,33 @@ _retry_loop() {
     attempt=$((attempt + 1))
     echo "==> [$label] Attempt $attempt/$((MAX_SESSION_RETRIES + 1))" >&2
 
-    if "$callback" "$attempt" "$stderr_file"; then
+    # ── Run callback with COMMAND_TIMEOUT (default 6 hours) ──
+    # The callback runs in the background. On timeout we use pkill -P
+    # to terminate all child processes (e.g. claude, jq in a pipe),
+    # then kill the background subshell itself.
+    local cmd_exit=0
+    "$callback" "$attempt" "$stderr_file" &
+    local cmd_pid=$!
+
+    if wait_with_timeout "$cmd_pid" "$COMMAND_TIMEOUT"; then
+      # Command completed within timeout -- capture its exit code
+      wait "$cmd_pid" 2>/dev/null
+      cmd_exit=$?
+    else
+      # Timed out -- kill children first (piped commands like claude | jq),
+      # then the background subshell itself.
+      echo "WARN: [$label] Command timed out after ${COMMAND_TIMEOUT}s (attempt $attempt/$((MAX_SESSION_RETRIES + 1))). Killing pid $cmd_pid and children." >&2
+      pkill -TERM -P "$cmd_pid" 2>/dev/null || true
+      kill -TERM "$cmd_pid" 2>/dev/null || true
+      sleep 2
+      pkill -KILL -P "$cmd_pid" 2>/dev/null || true
+      kill -KILL "$cmd_pid" 2>/dev/null || true
+      wait "$cmd_pid" 2>/dev/null || true
+      cmd_exit=1
+      echo "command timed out after ${COMMAND_TIMEOUT}s (attempt $attempt/$((MAX_SESSION_RETRIES + 1)))" > "$stderr_file"
+    fi
+
+    if [ "$cmd_exit" -eq 0 ]; then
       rm -f "$stderr_file"
       return 0
     fi
@@ -82,9 +138,9 @@ _retry_loop() {
     error_type=$(describe_error_type "$captured_stderr")
 
     if [ "$error_type" = "session/rate limit" ]; then
-      echo "WARN: [$label] Session/rate limit hit. Waiting ${SESSION_RETRY_WAIT}s before retry ($attempt/$MAX_SESSION_RETRIES)..." >&2
+      echo "WARN: [$label] Session/rate limit hit. Waiting ${SESSION_RETRY_WAIT}s before retry ($attempt/$((MAX_SESSION_RETRIES + 1)))..." >&2
     else
-      echo "WARN: [$label] Command failed (non-zero exit). Waiting ${SESSION_RETRY_WAIT}s before retry ($attempt/$MAX_SESSION_RETRIES)..." >&2
+      echo "WARN: [$label] Command failed (non-zero exit). Waiting ${SESSION_RETRY_WAIT}s before retry ($attempt/$((MAX_SESSION_RETRIES + 1)))..." >&2
       echo "  stderr: $captured_stderr" >&2
     fi
 
@@ -129,9 +185,10 @@ run_with_session_retry() {
 # direct use -- prefer `just claude` which wraps this with retry logic.
 _raw_claude_stream() {
   local prompt="$1"
+  # shellcheck disable=SC2086
   claude -p "$prompt" \
     --output-format stream-json --verbose --include-partial-messages \
-    --permission-mode auto | \
+    $PERMISSION_MODE | \
     jq -rj 'select(.type == "stream_event" and .event.delta.type? == "text_delta") | .event.delta.text'
 }
 

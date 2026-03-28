@@ -1,3 +1,28 @@
+# ── Configuration defaults ──────────────────────────────────────────
+# All configurable environment variables for claude recipes:
+#
+#   PERMISSION_MODE       Claude CLI permission flag.
+#                         Default: "--permission-mode auto"
+#                         Alternative: "--dangerously-skip-permissions"
+#
+#   MAX_SESSION_RETRIES   Max retry attempts on CLI failure (in claude-helpers.sh).
+#                         Default: 12
+#
+#   SESSION_RETRY_WAIT    Seconds to wait between retries (in claude-helpers.sh).
+#                         Default: 3600 (1 hour)
+#
+#   COMMAND_TIMEOUT       Max seconds a single `claude -p` command may run
+#                         before being killed and retried (in claude-helpers.sh).
+#                         Default: 21600 (6 hours)
+#
+#   DRAFT_DIR / TODO_DIR / DONE_DIR
+#                         Task file directories (in claude-helpers.sh).
+#                         Defaults: .specs/tasks/{draft,todo,done}
+# ────────────────────────────────────────────────────────────────────
+
+# `export` is required so the variable is visible inside recipe shell
+# environments (each recipe runs in a separate bash process).
+export PERMISSION_MODE := env("PERMISSION_MODE", "--permission-mode auto")
 
 [doc("Show all available commands with their descriptions")]
 help:
@@ -184,17 +209,18 @@ claude-json prompt json_schema="" label="claude-json":
     _raw_claude_json() {
       local prompt="$1"
       local schema="${2:-}"
+      # shellcheck disable=SC2086
       if [ -n "$schema" ]; then
         claude -p "$prompt" \
           --output-format json \
           --verbose \
           --json-schema "$schema" \
-          --permission-mode auto
+          $PERMISSION_MODE
       else
         claude -p "$prompt" \
           --output-format json \
           --verbose \
-          --permission-mode auto
+          $PERMISSION_MODE
       fi
     }
     run_with_session_retry "{{ label }}" _raw_claude_json "{{ prompt }}" '{{ json_schema }}'
