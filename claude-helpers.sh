@@ -76,10 +76,9 @@ run_with_session_retry() {
 
   echo "==> [$label] Running with retry (max $((MAX_SESSION_RETRIES + 1)) attempts, timeout ${COMMAND_TIMEOUT}s)..." >&2
 
-  # retry: --max-attempts=N, --delay=seconds between retries
-  # We add 1 to MAX_SESSION_RETRIES because retry counts the first attempt too
+  # retry: --times=N (number of retries), --delay=seconds between retries
   retry \
-    --max-attempts "$((MAX_SESSION_RETRIES + 1))" \
+    --times "$((MAX_SESSION_RETRIES + 1))" \
     --delay "$SESSION_RETRY_WAIT" \
     -- bash -c '"$@"' bash "$@"
 }
@@ -115,7 +114,7 @@ run_plan_or_implement_retry() {
   echo "==> [$label] Running with retry (max $((MAX_SESSION_RETRIES + 1)) attempts, timeout ${COMMAND_TIMEOUT}s)..." >&2
 
   retry \
-    --max-attempts "$((MAX_SESSION_RETRIES + 1))" \
+    --times "$((MAX_SESSION_RETRIES + 1))" \
     --delay "$SESSION_RETRY_WAIT" \
     -- bash -c '_attempt_fn'
 }
