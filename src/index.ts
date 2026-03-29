@@ -3,5 +3,26 @@ export * from './types';
 export * from './LogWrapper';
 export * from './axios/axios.logger';
 export * from './axios/isTimoutError';
-export * from './decorate/applyToMethod';
-export * from './decorate/applyToClass';
+
+// Generic decorator primitives (logger-agnostic)
+export {
+  Effect,
+  EffectOnMethod,
+  EffectOnClass,
+  SetMeta,
+  getMeta,
+  setMeta,
+  EFFECT_APPLIED_KEY,
+  OnInvokeHook,
+  AfterReturnHook,
+  OnErrorHook,
+  FinallyHook,
+} from './decorators';
+
+export type {
+  EffectHooks,
+  OnInvokeHookType,
+  AfterReturnHookType,
+  OnErrorHookType,
+  FinallyHookType,
+} from './decorators';

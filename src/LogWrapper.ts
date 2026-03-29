@@ -55,7 +55,16 @@ export class LogWrapper {
   }
 }
 
-/** If you see it, then you probably forgot to add `readonly logger = new Logger(YourClass.name)` to your class */
+/**
+ * Interface for classes that expose a NestJS Logger instance.
+ *
+ * Implementing this interface is optional when using the `@Log()` decorator.
+ * If a class does not define a `logger` property, the decorator will
+ * automatically inject a `new Logger(ClassName)` instance at runtime.
+ *
+ * You may still implement this interface explicitly to provide a custom logger
+ * (e.g., a mock for testing, or a logger with a non-default context).
+ */
 export interface Loggable {
   logger: Logger;
 }
@@ -65,7 +74,19 @@ export const isLoggable = (instance: unknown): instance is Loggable => {
 };
 
 /**
- * Creates a LogWrapper instance with validated logger and built args object.
+ * Creates a LogWrapper instance for structured method logging.
+ *
+ * When the target instance already has a `logger` property (i.e., satisfies
+ * the {@link Loggable} interface), that logger is used directly. Otherwise,
+ * a new `Logger` from `@nestjs/common` is created with `className` as its
+ * context and assigned to `instance.logger`, so subsequent calls reuse it.
+ *
+ * @param instance   - The class instance whose method is being logged
+ * @param className  - The name of the class (used as Logger context if auto-injected)
+ * @param methodName - The name of the method being logged
+ * @param argsObject - Formatted arguments to include in the log entry
+ * @returns A configured {@link LogWrapper} ready for invoked/success/error calls
+ *
  * @internal
  */
 export const createLogWrapper = (
@@ -74,12 +95,11 @@ export const createLogWrapper = (
   methodName: string,
   argsObject: string | number | Record<string, unknown> | undefined,
 ): LogWrapper => {
-  // Validate logger exists
   if (!isLoggable(instance)) {
-    throw new Error(`Logger not found in ${className}. Please add: readonly logger = new Logger(${className}.name)`);
+    (instance as Record<string, unknown>).logger = new Logger(className);
   }
 
-  return new LogWrapper(instance.logger, methodName, argsObject);
+  return new LogWrapper((instance as Loggable).logger, methodName, argsObject);
 };
 
 /**

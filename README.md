@@ -33,6 +33,7 @@ TypeScript decorators that eliminate logging boilerplate from NestJS application
 - Prettifies Axios errors
 - Zero configuration
 - Zero dependencies
+- Auto-injected logger (no need to define `logger` property)
 
 ## Installation
 
@@ -42,19 +43,17 @@ npm install nestjs-log-decorator @nestjs/common
 
 ## Quick Start
 
+Simply apply `@Log()` to your class or method. No logger property required:
+
 ```typescript
-import { Logger } from '@nestjs/common';
 import { Log } from 'nestjs-log-decorator';
 
 class UserService {
-  readonly logger = new Logger(UserService.name);
-
   @Log()
   createUser(name: string, email: string) {
     return { id: 1, name, email };
   }
 }
-
 ```
 
 Once a service method is called, it will log the method invocation with all arguments.
@@ -106,31 +105,46 @@ const result = await resultPromise;
 
 ### Complete Example
 
-After installation, no additional configuration is needed, just make sure that your class has a public `logger` property that implements the default NestJS Logger interface.
+After installation, no additional configuration is needed. The `@Log()` decorator automatically injects a NestJS Logger instance using the class name as the context.
 
 ```typescript
-import { Logger } from '@nestjs/common';
 import { Log } from 'nestjs-log-decorator';
 
-
+@Log()
 class PaymentService {
-  // `logger` property will be used by decorator
-  readonly logger = new Logger(PaymentService.name);
+  // No logger property needed - auto-injected!
 
-  @Log()
   async processPayment(amount: number, currency: string) {
     // Automatically logged on success or error
     return await this.gateway.processPayment(amount, currency);
   }
 
   async refund(transactionId: string) {
-    // Not logged without @Log() decorator
+    // Also logged (all methods in class are logged)
     return await this.gateway.refund(transactionId);
   }
 }
 ```
 
-The `logger` property is public due to TypeScript validation limitations. TS cannot check if a private property is valid, but it should still work even if the property is private.
+#### Explicit Logger (Optional)
+
+If you need a custom logger (e.g., for testing or a different context), you can still define your own:
+
+```typescript
+import { Logger } from '@nestjs/common';
+import { Log } from 'nestjs-log-decorator';
+
+@Log()
+class PaymentService {
+  // Explicit logger takes precedence over auto-injected one
+  readonly logger = new Logger('CustomPaymentContext');
+
+  async processPayment(amount: number, currency: string) {
+    // Logs using the explicit logger with 'CustomPaymentContext' context
+    return await this.gateway.processPayment(amount, currency);
+  }
+}
+```
 
 ## How It Works
 
@@ -141,38 +155,38 @@ The `@Log()` decorator wraps your methods with automatic try-catch logging. It e
 │                            @Log() Decorator Flow                            │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-  Method Call                                                        
-       │                                                             
-       ▼                                                             
-┌──────────────────┐                                                 
-│ Extract Args     │  ──▶  { id: 1, name: 'John' }                   
-│ (auto or custom) │                                                 
-└────────┬─────────┘                                                 
-         │                                                           
-         ▼                                                           
-┌──────────────────┐       ┌─────────────────────────────────────┐   
-│ onInvoke: true?  │──YES─▶│ logger.log({ state: 'invoked' })    │   
-└────────┬─────────┘       └─────────────────────────────────────┘   
-         │ NO                                                        
-         ▼                                                           
-┌──────────────────────┐                                                 
-│ Execute Original     │                                                 
-│ Method (sync/async)  │                                                 
-└────────┬─────────────┘                                                 
-         │                                                           
-    ┌────┴────┐                                                      
-    ▼         ▼                                                      
- SUCCESS    ERROR                                                    
-    │         │                                                      
-    ▼         ▼                                                      
-┌────────┐ ┌──────────────────────────────────────────────────────┐  
-│log()   │ │ logger.error({ state: 'error', error: prettify(e) })│  
-│success │ │ (Axios errors auto-prettified)                      │  
-└────────┘ └──────────────────────────────────────────────────────┘  
-    │         │                                                      
-    ▼         ▼                                                      
- Return    Re-throw                                                  
- Result    Error                                                     
+  Method Call
+       │
+       ▼
+┌──────────────────┐
+│ Extract Args     │  ──▶  { id: 1, name: 'John' }
+│ (auto or custom) │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐       ┌─────────────────────────────────────┐
+│ onInvoke: true?  │──YES─▶│ logger.log({ state: 'invoked' })    │
+└────────┬─────────┘       └─────────────────────────────────────┘
+         │ NO
+         ▼
+┌──────────────────────┐
+│ Execute Original     │
+│ Method (sync/async)  │
+└────────┬─────────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+ SUCCESS    ERROR
+    │         │
+    ▼         ▼
+┌────────┐ ┌──────────────────────────────────────────────────────┐
+│log()   │ │ logger.error({ state: 'error', error: prettify(e) })│
+│success │ │ (Axios errors auto-prettified)                      │
+└────────┘ └──────────────────────────────────────────────────────┘
+    │         │
+    ▼         ▼
+ Return    Re-throw
+ Result    Error
 ```
 
 ## Usage
@@ -182,9 +196,9 @@ The `@Log()` decorator wraps your methods with automatic try-catch logging. It e
 Apply `@Log()` to specific methods for granular control:
 
 ```typescript
-class DataService {
-  readonly logger = new Logger(DataService.name);
+import { Log } from 'nestjs-log-decorator';
 
+class DataService {
   @Log()
   async fetchData(id: number) {
     // This method is logged
@@ -203,14 +217,11 @@ class DataService {
 If you want to log all methods in a class, use the `@Log()` decorator on its definition:
 
 ```typescript
-import { Logger } from '@nestjs/common';
 import { Log } from 'nestjs-log-decorator';
 
 @Log()
 @Injectable()
 class PaymentService {
-  readonly logger = new Logger(PaymentService.name);
-
   processPayment(amount: number, currency: string) {
     // Automatically logged on success or error
     return { status: 'completed', amount, currency };
@@ -232,8 +243,6 @@ import { Log, NoLog } from 'nestjs-log-decorator';
 
 @Log()
 class UserService {
-  readonly logger = new Logger(UserService.name);
-
   createUser(name: string) {
     // Logged
     return { name };
@@ -268,8 +277,6 @@ Class-level with `onInvoke`:
 ```typescript
 @Log({ onInvoke: true })
 class ApiService {
-  readonly logger = new Logger(ApiService.name);
-  
   // All methods will log invocation + completion
 }
 ```
@@ -289,8 +296,6 @@ interface LargePayload {
 }
 
 class SyncService {
-  readonly logger = new Logger(SyncService.name);
-
   // Only log the ID, exclude the large payload
   @Log({ args: (id: number, _payload: LargePayload) => ({ id }) })
   async syncData(id: number, payload: LargePayload) {
@@ -437,7 +442,7 @@ async fetchData(url: string) {
 
 ### `Log(options?)`
 
-Decorator that can be applied to classes or methods.
+Decorator that can be applied to classes or methods. When applied to a class, a logger is auto-injected if not already defined.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
@@ -459,8 +464,42 @@ import { Log, NoLog, LogOptions, Loggable, isLoggable } from 'nestjs-log-decorat
 | `Log` | Decorator | Main logging decorator |
 | `NoLog` | Decorator | Exclude method from logging |
 | `LogOptions` | Interface | Options for `@Log()` decorator |
-| `Loggable` | Interface | Interface for classes with a `logger` property |
+| `Loggable` | Interface | Interface for classes with a `logger` property (optional) |
 | `isLoggable` | Function | Type guard to check if instance has logger |
+
+### Generic Decorator Primitives
+
+The library also exports logger-agnostic decorator primitives for building custom decorators:
+
+```typescript
+import {
+  Effect,
+  EffectOnMethod,
+  EffectOnClass,
+  SetMeta,
+  getMeta,
+  setMeta,
+  EFFECT_APPLIED_KEY,
+  OnInvokeHook,
+  AfterReturnHook,
+  OnErrorHook,
+  FinallyHook,
+} from 'nestjs-log-decorator';
+```
+
+| Export | Type | Description |
+|--------|------|-------------|
+| `Effect` | Decorator | Unified class+method decorator with lifecycle hooks |
+| `EffectOnMethod` | Decorator | Method decorator with lifecycle hooks |
+| `EffectOnClass` | Decorator | Class decorator that applies hooks to all methods |
+| `SetMeta` | Decorator | Store metadata on methods |
+| `getMeta` | Function | Retrieve metadata from methods |
+| `setMeta` | Function | Programmatically set metadata on functions |
+| `EFFECT_APPLIED_KEY` | Symbol | Key used to mark methods as already decorated |
+| `OnInvokeHook` | Decorator | Convenience hook for `onInvoke` |
+| `AfterReturnHook` | Decorator | Convenience hook for `afterReturn` |
+| `OnErrorHook` | Decorator | Convenience hook for `onError` |
+| `FinallyHook` | Decorator | Convenience hook for `finally` |
 
 ## Advanced Example
 
@@ -471,6 +510,7 @@ import { Log, NoLog } from 'nestjs-log-decorator';
 @Log()
 @Injectable()
 export class OrderService {
+  // Optional: explicit logger takes precedence over auto-injected one
   readonly logger = new Logger(OrderService.name);
 
   constructor(
@@ -485,9 +525,9 @@ export class OrderService {
   }
 
   // Logged with invocation + custom args (exclude sensitive card data)
-  @Log({ 
-    onInvoke: true, 
-    args: (orderId: number, _cardDetails: CardDetails) => ({ orderId }) 
+  @Log({
+    onInvoke: true,
+    args: (orderId: number, _cardDetails: CardDetails) => ({ orderId })
   })
   async processPayment(orderId: number, cardDetails: CardDetails) {
     const result = await this.paymentGateway.charge(orderId, cardDetails);

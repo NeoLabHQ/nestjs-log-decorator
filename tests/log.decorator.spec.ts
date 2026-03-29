@@ -330,7 +330,7 @@ describe('Log Decorator', () => {
       });
     });
 
-    it('should throw error if logger property is not found', () => {
+    it('should auto-inject logger when class has no logger property', () => {
       class TestService {
         @Log()
         loadData(id: number) {
@@ -340,9 +340,10 @@ describe('Log Decorator', () => {
 
       const service = new TestService();
 
-      expect(() => service.loadData(1)).toThrow(
-        'Logger not found in TestService. Please add: readonly logger = new Logger(TestService.name)',
-      );
+      // Should not throw; logger is auto-injected
+      expect(() => service.loadData(1)).not.toThrow();
+      // Verify a logger was injected onto the instance
+      expect((service as any).logger).toBeDefined();
     });
 
     it('should prettify axios errors when logging', () => {
@@ -621,6 +622,8 @@ describe('Log Decorator', () => {
       const service = new TestService();
 
       service.method1(1);
+      // method1: only class-level decorator applies, so only 1 log call
+      expect(mockLogger.log).toHaveBeenCalledTimes(1);
       expect(mockLogger.log).toHaveBeenCalledWith({
         method: 'method1',
         state: 'success',
@@ -635,6 +638,8 @@ describe('Log Decorator', () => {
       mockLogger.log.mockClear();
 
       service.method2('test');
+      // method2: method-level decorator takes priority, so 2 log calls (invoked + success)
+      expect(mockLogger.log).toHaveBeenCalledTimes(2);
       // method2 should have onInvoke from method-level decorator
       expect(mockLogger.log).toHaveBeenCalledWith({
         method: 'method2',
@@ -646,6 +651,187 @@ describe('Log Decorator', () => {
         state: 'success',
         args: { name: 'test' },
       });
+    });
+
+    it('should not double-log when class-level and method-level @Log() are both applied', () => {
+      const mockLogger = createMockLogger();
+
+      @Log()
+      class TestService {
+        readonly logger = mockLogger as unknown as Logger;
+
+        @Log({ onInvoke: true })
+        methodWithBothDecorators(name: string) {
+          return { name };
+        }
+      }
+
+      const service = new TestService();
+
+      service.methodWithBothDecorators('test');
+
+      // Should have exactly 2 log calls: invoked + success
+      // Not 4 (which would happen if both decorators wrapped independently)
+      expect(mockLogger.log).toHaveBeenCalledTimes(2);
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'methodWithBothDecorators',
+        state: 'invoked',
+        args: { name: 'test' },
+      });
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'methodWithBothDecorators',
+        state: 'success',
+        args: { name: 'test' },
+      });
+    });
+
+    it('should auto-inject logger for class-level @Log', () => {
+      // No explicit logger property defined
+      @Log()
+      class TestService {
+        method1(id: number) {
+          return { id };
+        }
+
+        async method2(name: string) {
+          return await Promise.resolve({ name });
+        }
+      }
+
+      const service = new TestService();
+
+      // Should not throw; logger is auto-injected
+      expect(() => service.method1(1)).not.toThrow();
+      expect((service as any).logger).toBeDefined();
+
+      // Verify logger has the correct context (class name)
+      expect((service as any).logger.constructor.name).toBe('Logger');
+    });
+
+    it('should preserve existing logger when class defines one', () => {
+      const mockLogger = createMockLogger();
+
+      @Log()
+      class TestService {
+        // User-defined logger takes precedence over auto-injected
+        readonly logger = mockLogger as unknown as Logger;
+
+        method1(id: number) {
+          return { id };
+        }
+      }
+
+      const service = new TestService();
+
+      service.method1(1);
+
+      // Verify the mock logger was used, not an auto-injected one
+      expect(mockLogger.log).toHaveBeenCalledTimes(1);
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'method1',
+        state: 'success',
+        args: { id: 1 },
+      });
+    });
+
+    it('should handle anonymous class expressions', () => {
+      // Anonymous class expression with no explicit name
+      const ServiceClass = Log()(class {
+        method() {
+          return 1;
+        }
+      });
+
+      const service = new ServiceClass();
+
+      // Should not crash and method should work
+      expect(() => service.method()).not.toThrow();
+      expect(service.method()).toBe(1);
+      // Logger should be auto-injected even for anonymous class
+      expect((service as any).logger).toBeDefined();
+    });
+
+    it('should handle class with getters and setters', () => {
+      const mockLogger = createMockLogger();
+
+      @Log()
+      class TestService {
+        private _value = 0;
+        readonly logger = mockLogger as unknown as Logger;
+
+        regularMethod() {
+          return 'method result';
+        }
+
+        // Getter should not be wrapped
+        get value() {
+          return this._value;
+        }
+
+        // Setter should not be wrapped
+        set value(v: number) {
+          this._value = v;
+        }
+      }
+
+      const service = new TestService();
+
+      // Regular method should be logged
+      service.regularMethod();
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'regularMethod',
+        state: 'success',
+        args: undefined,
+      });
+
+      mockLogger.log.mockClear();
+
+      // Getter access should not produce log
+      const val = service.value;
+      expect(val).toBe(0);
+      expect(mockLogger.log).not.toHaveBeenCalled();
+
+      // Setter access should not produce log
+      service.value = 42;
+      expect(service.value).toBe(42);
+      expect(mockLogger.log).not.toHaveBeenCalled();
+    });
+
+    it('should handle class inheritance', () => {
+      const mockLogger = createMockLogger();
+
+      class ParentService {
+        parentMethod(id: number) {
+          return { id, source: 'parent' };
+        }
+      }
+
+      @Log()
+      class ChildService extends ParentService {
+        readonly logger = mockLogger as unknown as Logger;
+
+        childMethod(name: string) {
+          return { name, source: 'child' };
+        }
+      }
+
+      const service = new ChildService();
+
+      // Child method should be logged (own methods on decorated class)
+      service.childMethod('test');
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'childMethod',
+        state: 'success',
+        args: { name: 'test' },
+      });
+
+      mockLogger.log.mockClear();
+
+      // Inherited parent method is NOT logged because it is defined on the parent prototype,
+      // not the child's own prototype. Only own methods on the decorated class are wrapped.
+      const result = service.parentMethod(123);
+      expect(result).toEqual({ id: 123, source: 'parent' });
+      expect(mockLogger.log).not.toHaveBeenCalled();
     });
   });
 
