@@ -676,6 +676,20 @@ claude-fix-pr-comments:
     #!/usr/bin/env bash
     set -euo pipefail
 
+    # ── Pre-check: GitHub CLI authentication ─────────────────────────
+    if ! gh auth status &>/dev/null; then
+        echo ""
+        echo "GitHub CLI is not authenticated — there's no GH_TOKEN or GITHUB_TOKEN set in the environment, and gh auth login hasn't been run."
+        echo ""
+        echo "To fix this, you can either:"
+        echo ""
+        echo "1. Run interactive login — type this in the prompt:"
+        echo "   ! gh auth login"
+        echo "2. Set a token — export a GitHub personal access token:"
+        echo "   ! export GH_TOKEN=ghp_your_token_here"
+        exit 1
+    fi
+
     echo ""
     echo "================================================================"
     echo "  Fixing PR comments"
@@ -689,23 +703,29 @@ claude-fix-pr-comments:
     just claude "$load_prompt" "load-pr-comments"
     echo ""
 
-    # ── Step 2: Fix comments ────────────────────────────────────────
-    echo "==> Step 2: Fixing PR comments"
-    fix_prompt="/sadd:do-in-parallel launch agents to fix all comments in @.specs/comments/"
+    # ── Step 2: Combine comments ────────────────────────────────────
+    echo "==> Step 2: Combining PR comments"
+    combine_prompt="/sadd:do-and-judge Analyze and combine related comments or comments that impossible to do in parallel in @.specs/comments/ into a multiple md files. Avoid rewriting them, just combine text, avoid summarising. If there any nitpicks or one line changes, combine them in one aggregation also. Try to keep amount of files no more than 5, but do not combine too much unrelated changes! Each of them will be done by separate, parllel agents. As a result they should have own focused task to produce good result. After combining, delete old files that no longer relevant. CRITICAL: do not left comments folder in intermidiate state, when there are both combined files and their original copies!"
+    just claude "$combine_prompt" "combine-pr-comments"
+    echo ""
+
+    # ── Step 3: Fix comments ────────────────────────────────────────
+    echo "==> Step 3: Fixing PR comments"
+    fix_prompt="/sadd:do-in-parallel launch agents to fix all comments in @.specs/comments/ in parallel"
     just claude "$fix_prompt" "fix-pr-comments"
     echo ""
 
-    # ── Step 3: Verify and fix ──────────────────────────────────────
-    echo "==> Step 3: Verifying fixes"
+    # ── Step 4: Verify and fix ──────────────────────────────────────
+    echo "==> Step 4: Verifying fixes"
     just claude-verify-and-fix
 
-    # ── Step 4: Clean up ────────────────────────────────────────────
-    echo "==> Step 4: Cleaning up comment files"
+    # ── Step 5: Clean up ────────────────────────────────────────────
+    echo "==> Step 5: Cleaning up comment files"
     rm -f .specs/comments/*.md
     echo "==> Comment files cleaned up."
 
-    # ── Step 5: Commit ──────────────────────────────────────────────
-    echo "==> Step 5: Committing changes"
+    # ── Step 6: Commit ──────────────────────────────────────────────
+    echo "==> Step 6: Committing changes"
     just claude-commit
 
 [doc("""
