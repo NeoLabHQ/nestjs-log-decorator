@@ -43,7 +43,7 @@ npm install nestjs-log-decorator @nestjs/common
 
 ## Quick Start
 
-Simply apply `@Log()` to your class or method. No logger property required:
+Simply apply `@Log()` to your class or method:
 
 ```typescript
 import { Log } from 'nestjs-log-decorator';
@@ -105,22 +105,21 @@ const result = await resultPromise;
 
 ### Complete Example
 
-After installation, no additional configuration is needed. The `@Log()` decorator automatically injects a NestJS Logger instance using the class name as the context.
+After installation, no additional configuration is needed. If the class has `logger` properly, the `@Log()` decorator will use it log method. If the logger is missing, the decorator will inject `@nestjs/common` Logger instance using the class name as the context.
 
 ```typescript
 import { Log } from 'nestjs-log-decorator';
 
-@Log()
 class PaymentService {
-  // No logger property needed - auto-injected!
 
+  @Log()
   async processPayment(amount: number, currency: string) {
     // Automatically logged on success or error
     return await this.gateway.processPayment(amount, currency);
   }
 
   async refund(transactionId: string) {
-    // Also logged (all methods in class are logged)
+    // Not logged without @Log() decorator
     return await this.gateway.refund(transactionId);
   }
 }
@@ -442,7 +441,7 @@ async fetchData(url: string) {
 
 ### `Log(options?)`
 
-Decorator that can be applied to classes or methods. When applied to a class, a logger is auto-injected if not already defined.
+Decorator that can be applied to classes or methods. When applied to a class, by default all methods are logged.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
