@@ -26,6 +26,7 @@ export PERMISSION_MODE := env("PERMISSION_MODE", "--permission-mode auto")
 
 [doc("Show all available commands with their descriptions")]
 help:
+    @echo "PERMISSION_MODE: $PERMISSION_MODE"
     @just --list
 
 [doc("Get the running devcontainer ID (empty if not running)")]
@@ -407,7 +408,11 @@ claude-fix-lint-and-test:
 
     lint_test_pass=false
     for lt_attempt in 1 2 3; do
-      if npm run lint && npm run test; then
+      lint_exit=0
+      test_exit=0
+      npm run lint > /tmp/lint.log 2>&1 || lint_exit=$?
+      npm run test > /tmp/test.log 2>&1 || test_exit=$?
+      if [ "$lint_exit" -eq 0 ] && [ "$test_exit" -eq 0 ]; then
         lint_test_pass=true
         break
       fi
