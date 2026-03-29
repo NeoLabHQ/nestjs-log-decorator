@@ -103,8 +103,8 @@ _retry_loop() {
 
     if wait_with_timeout "$cmd_pid" "$COMMAND_TIMEOUT"; then
       # Command completed within timeout -- capture its exit code
-      wait "$cmd_pid" 2>/dev/null
-      cmd_exit=$?
+      cmd_exit=0
+      wait "$cmd_pid" 2>/dev/null || cmd_exit=$?
     else
       # Timed out -- kill children first (piped commands like claude | jq),
       # then the background subshell itself.
