@@ -494,32 +494,131 @@ claude-review-and-fix:
     echo "==> Code review passed."
 
 [doc("""
+  Run lint+test and code review loop, retrying up to 3 times.
+
+  Description:
+    Executes the verify-and-fix loop: runs lint+test followed by code review,
+    retrying up to 3 times until both pass.
+
+  Steps:
+    1. Run claude-fix-lint-and-test
+    2. Run claude-review-and-fix
+    3. If either fails, retry from step 1 (up to 3 attempts)
+
+  Parameters:
+    skip-lint-on-first - If "true", skip lint+test on the first loop attempt (default: "")
+
+  Usage:
+    just claude-verify-and-fix
+    just claude-verify-and-fix "true"
+""")]
+[no-exit-message]
+claude-verify-and-fix skip-lint-on-first="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    MAX_LOOP=3
+    loop_passed=false
+    SKIP_LINT_ON_FIRST="{{ skip-lint-on-first }}"
+
+    for loop_attempt in $(seq 1 $MAX_LOOP); do
+      echo ""
+      echo "==> Verify-and-fix loop: attempt $loop_attempt/$MAX_LOOP"
+
+      skip_lint=false
+      if [ "$loop_attempt" -eq 1 ] && [ "$SKIP_LINT_ON_FIRST" = "true" ]; then
+        skip_lint=true
+        echo "==> Skipping lint+test on first pass"
+      fi
+
+      if [ "$skip_lint" = "false" ]; then
+        if ! just claude-fix-lint-and-test; then
+          echo "WARN: Lint+test failed on attempt $loop_attempt"
+          if [ "$loop_attempt" -ge "$MAX_LOOP" ]; then
+            echo "ERROR: Lint+test failed on final attempt. Stopping."
+            exit 1
+          fi
+          continue
+        fi
+      fi
+
+      if ! just claude-review-and-fix; then
+        echo "WARN: Review failed on attempt $loop_attempt"
+        if [ "$loop_attempt" -ge "$MAX_LOOP" ]; then
+          echo "ERROR: Review failed on final attempt. Stopping."
+          exit 1
+        fi
+        continue
+      fi
+
+      echo "==> Lint+test and review both passed on attempt $loop_attempt"
+      loop_passed=true
+      break
+    done
+
+    if [ "$loop_passed" != "true" ]; then
+      echo "ERROR: Lint+test and review did not pass after $MAX_LOOP attempts."
+      exit 1
+    fi
+
+[doc("""
+  Create a git commit for recently completed work.
+
+  Description:
+    Uses Claude to generate a proper commit message and commit
+    all staged and unstaged changes.
+
+  Usage:
+    just claude-commit
+""")]
+[no-exit-message]
+claude-commit:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo ""
+    echo "==> Committing changes"
+    commit_prompt="/git:commit Please create proper commit message and commit changes."
+    just claude "$commit_prompt" "git-commit"
+    echo ""
+    echo "==> Changes committed."
+
+[doc("""
   Full pipeline: plan, implement, verify, lint, test, review, update roadmap, and commit.
 
   Description:
-    Executes the complete task pipeline (Steps 1-8) for a single task.
+    Executes the complete task pipeline for a single task.
     This is the main entry point for processing a task from start to finish.
 
   Steps:
     1-4. Plan, implement, verify, retry (via claude-plan-and-implement)
-    5. Run lint and tests with auto-fix (via claude-fix-lint-and-test)
-    6. Run code review with auto-fix (via claude-review-and-fix)
+    5-6. Lint+test and code review loop (via claude-verify-and-fix)
     7. Update roadmap tracking (marks task as done in roadmap.md)
-    8. Git commit the changes
+    8. Git commit the changes (via claude-commit)
+
+  Modes:
+    ""                    - Full pipeline from scratch
+    "continue-plan"       - Continue planning, then verify-and-fix, roadmap, commit
+    "continue-implement"  - Continue implementation, then verify-and-fix, roadmap, commit
+    "continue-lint-and-test" - Skip plan-and-implement, go straight to verify-and-fix
+    "continue-review"     - Skip plan-and-implement and lint-and-test on first pass, start at review
 
   Parameters:
     task-filename - The task filename (e.g., "add-feature-x.feature.md")
-    mode          - Optional mode: "", "continue-plan", or "continue-implement"
+    mode          - Optional mode (see Modes above)
 
   Usage:
     just claude-vibe "my-task.feature.md"
     just claude-vibe "my-task.feature.md" "continue-plan"
     just claude-vibe "my-task.feature.md" "continue-implement"
+    just claude-vibe "my-task.feature.md" "continue-lint-and-test"
+    just claude-vibe "my-task.feature.md" "continue-review"
 """)]
 [no-exit-message]
 claude-vibe task-filename mode="":
     #!/usr/bin/env bash
     set -euo pipefail
+    source claude-helpers.sh
 
     TASK_FILENAME="{{ task-filename }}"
     MODE="{{ mode }}"
@@ -530,14 +629,27 @@ claude-vibe task-filename mode="":
     echo "================================================================"
     echo ""
 
-    # Steps 1-4: Plan, implement, verify, retry
-    just claude-plan-and-implement "$TASK_FILENAME" "$MODE"
+    # ── Validate mode parameter ───────────────────────────────────────
+    case "$MODE" in
+      ""|"continue-plan"|"continue-implement"|"continue-lint-and-test"|"continue-review") ;;
+      *)
+        echo "ERROR: Unknown mode '$MODE'."
+        echo "Valid modes: '', 'continue-plan', 'continue-implement', 'continue-lint-and-test', 'continue-review'"
+        exit 1
+        ;;
+    esac
 
-    # Step 5: Lint and test
-    just claude-fix-lint-and-test
+    # ── Steps 1-4: Plan and implement (skipped for continue-lint-and-test and continue-review) ──
+    if [ "$MODE" != "continue-lint-and-test" ] && [ "$MODE" != "continue-review" ]; then
+      just claude-plan-and-implement "$TASK_FILENAME" "$MODE"
+    fi
 
-    # Step 6: Code review
-    just claude-review-and-fix
+    # ── Steps 5-6: Verify and fix ─────────────────────────────────────
+    if [ "$MODE" = "continue-review" ]; then
+      just claude-verify-and-fix "true"
+    else
+      just claude-verify-and-fix
+    fi
 
     # ── STEP 7: Update roadmap tracking ───────────────────────────────
     echo ""
@@ -551,12 +663,62 @@ claude-vibe task-filename mode="":
     fi
 
     # ── STEP 8: Git commit ─────────────────────────────────────────
+    just claude-commit
+
+[doc("""
+  Load open PR comments, fix them, verify, and commit.
+
+  Description:
+    Automates the process of addressing PR review comments:
+    loads open comments, converts them to tasks, fixes them in parallel,
+    verifies the fixes, cleans up, and commits.
+
+  Steps:
+    1. Load open PR comments and save as task files
+    2. Launch parallel agents to fix all comments
+    3. Run verify-and-fix loop (lint+test + review)
+    4. Clean up comment task files
+    5. Commit the changes
+
+  Usage:
+    just claude-fix-pr-comments
+""")]
+[no-exit-message]
+claude-fix-pr-comments:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
     echo ""
-    echo "==> Step 8: Committing changes"
-    commit_prompt="/git:commit The $TASK_FILENAME task was completed recently, please create proper commit message and commit changes."
-    just claude "$commit_prompt" "git-commit"
+    echo "================================================================"
+    echo "  Fixing PR comments"
+    echo "================================================================"
     echo ""
-    echo "==> Changes committed."
+
+    # ── Step 1: Load PR comments ────────────────────────────────────
+    echo "==> Step 1: Loading PR comments"
+    mkdir -p .specs/comments
+    load_prompt="/pr-comments load ONLY open PR comments for current git branch from github and save it as separate md files to @.specs/comments/. Rewrite them as tasks, avoid summarising: write human feedback as requirements, if it not exists then claude fix suggestion as requirements, add claude issue description and link to the file and line as task context. (if they available). Do not duplicate issues!"
+    just claude "$load_prompt" "load-pr-comments"
+    echo ""
+
+    # ── Step 2: Fix comments ────────────────────────────────────────
+    echo "==> Step 2: Fixing PR comments"
+    fix_prompt="/sadd:do-in-parallel launch agents to fix all comments in @.specs/comments/"
+    just claude "$fix_prompt" "fix-pr-comments"
+    echo ""
+
+    # ── Step 3: Verify and fix ──────────────────────────────────────
+    echo "==> Step 3: Verifying fixes"
+    just claude-verify-and-fix
+
+    # ── Step 4: Clean up ────────────────────────────────────────────
+    echo "==> Step 4: Cleaning up comment files"
+    rm -f .specs/comments/*.md
+    echo "==> Comment files cleaned up."
+
+    # ── Step 5: Commit ──────────────────────────────────────────────
+    echo "==> Step 5: Committing changes"
+    just claude-commit
 
 [doc("""
   Run the full loop: process all tasks from roadmap until complete.
