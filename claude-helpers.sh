@@ -13,12 +13,6 @@ SESSION_RETRY_WAIT="${SESSION_RETRY_WAIT:-3600}"    # 1 hour in seconds
 COMMAND_TIMEOUT="${COMMAND_TIMEOUT:-21600}"          # 6 hours in seconds
 PERMISSION_MODE="${PERMISSION_MODE:---permission-mode auto}"
 
-# Handle empty string cases (bash ${VAR:-default} only works for unset, not empty)
-[ -z "$MAX_SESSION_RETRIES" ] && MAX_SESSION_RETRIES=12
-[ -z "$SESSION_RETRY_WAIT" ] && SESSION_RETRY_WAIT=3600
-[ -z "$COMMAND_TIMEOUT" ] && COMMAND_TIMEOUT=21600
-[ -z "$PERMISSION_MODE" ] && PERMISSION_MODE="--permission-mode auto"
-
 DRAFT_DIR="${DRAFT_DIR:-.specs/tasks/draft}"
 TODO_DIR="${TODO_DIR:-.specs/tasks/todo}"
 DONE_DIR="${DONE_DIR:-.specs/tasks/done}"
