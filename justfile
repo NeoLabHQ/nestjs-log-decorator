@@ -207,23 +207,6 @@ claude-json prompt json_schema="" label="claude-json":
     #!/usr/bin/env bash
     set -euo pipefail
     source claude-helpers.sh
-    _raw_claude_json() {
-      local prompt="$1"
-      local schema="${2:-}"
-      # shellcheck disable=SC2086
-      if [ -n "$schema" ]; then
-        claude -p "$prompt" \
-          --output-format json \
-          --verbose \
-          --json-schema "$schema" \
-          $PERMISSION_MODE
-      else
-        claude -p "$prompt" \
-          --output-format json \
-          --verbose \
-          $PERMISSION_MODE
-      fi
-    }
     run_with_session_retry "{{ label }}" _raw_claude_json "{{ prompt }}" '{{ json_schema }}'
 
 [doc("""
