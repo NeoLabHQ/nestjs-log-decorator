@@ -26,7 +26,7 @@
     "build:watch": "tsdown --watch",
     "dev": "concurrently -c auto --names build,test npm:build:watch npm:test",
     "lint": "npm run typecheck",
-    "test": "vitest",
+    "test": "vitest --run",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "commit": "cz help",
