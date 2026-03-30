@@ -33,7 +33,7 @@ TypeScript decorators that eliminate logging boilerplate from NestJS application
 - Prettifies Axios errors
 - Zero configuration
 - Minimal dependencies
-- Auto-injected logger (no need to define `logger` property)
+- Uses default `@nestjs/common` Logger instance
 
 ## Installation
 
