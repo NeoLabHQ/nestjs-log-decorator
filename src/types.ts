@@ -1,9 +1,10 @@
 export type LogArgsFormatter<TArgs extends unknown[]> = (...args: TArgs) => string | number | Record<string, unknown> | undefined;
+export type LogResultFormatter<TResult = unknown> = (result: TResult) => unknown;
 
 /**
  * Configuration options for the Log decorator.
  */
-export interface LogOptions<TArgs extends unknown[] = unknown[]> {
+export interface LogOptions<TArgs extends unknown[] = unknown[], TResult = unknown> {
   /**
    * When true, logs method invocation with arguments.
    * When false or not set, only logs success and error states.
@@ -27,6 +28,22 @@ export interface LogOptions<TArgs extends unknown[] = unknown[]> {
    * @returns Formatted arguments as string, number, object, or undefined
    */
   args?: LogArgsFormatter<TArgs>;
+
+  /**
+   * Controls how successful method result is logged.
+   *
+   * - `true`: logs the returned result value as-is
+   * - formatter function: receives the method result and returns a formatted value
+   *
+   * @example
+   * // Log raw result
+   * @Log({ result: true })
+   *
+   * @example
+   * // Log only selected result fields
+   * @Log({ result: (res: { id: number; data: unknown }) => ({ id: res.id }) })
+   */
+  result?: true | LogResultFormatter<TResult>;
 }
 
 /**

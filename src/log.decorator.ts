@@ -1,10 +1,6 @@
-import { applyToClass } from './decorate/applyToClass';
-import { applyToMethod } from './decorate/applyToMethod';
+import { Effect, SetMeta } from 'base-decorators';
+import { createLogWrapper } from './LogWrapper';
 import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
-import type { Loggable } from './LogWrapper';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type LoggableConstructor = new (...args: any[]) => Loggable;
 
 /**
  * Decorator function that can be applied to classes or methods.
@@ -12,11 +8,20 @@ type LoggableConstructor = new (...args: any[]) => Loggable;
  * keeping method decorators flexible.
  */
 interface LogDecorator {
-  /** Class decorator - enforces that class instances have a `logger` property */
-  <T extends LoggableConstructor>(target: T): T;
-  /** Method decorator - no compile-time constraint on `this` */
+  /**
+   * Class decorator - applies logging to all methods in the class.
+   * The class no longer needs to define a `logger` property; one will
+   * be auto-injected if missing.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  <T extends new (...args: any[]) => unknown>(target: T): T;
+  /**
+   * Method decorator - no compile-time constraint on `this`.
+   * Wraps only the specific method with logging.
+   */
   (target: object, propertyKey: string | symbol, descriptor: PropertyDescriptor): PropertyDescriptor;
 }
+
 
 /**
  * Unified decorator that works on both classes and methods.
@@ -25,6 +30,7 @@ interface LogDecorator {
  *
  * **Usage on Classes:**
  * When applied to a class, wraps all methods in the class with logging.
+ * A `logger` property is auto-injected if not already defined.
  *
  * **Usage on Methods:**
  * When applied to a method, wraps only that specific method with logging.
@@ -34,13 +40,10 @@ interface LogDecorator {
  * - Successful completion with arguments
  * - Errors with arguments and error details (Axios errors are automatically prettified)
  *
- * **Requirements:**
- * The class must have a `logger` property (typically a NestJS Logger instance).
- *
  * **Log Format:**
  * All logs are output as structured objects with the following format:
  * - Invocation: `{ method: string, state: 'invoked', args: Record<string, any> }` (only when `onInvoke: true`)
- * - Success: `{ method: string, state: 'success', args: Record<string, any> }`
+ * - Success: `{ method: string, state: 'success', args: Record<string, any>, result?: unknown }`
  * - Error: `{ method: string, state: 'error', args: Record<string, any>, error: Error | PrettifiedAxiosError }`
  *
  * **Custom Argument Formatting:**
@@ -48,6 +51,11 @@ interface LogDecorator {
  * - Excluding large objects from logs
  * - Logging only specific arguments
  * - Transforming sensitive data before logging
+ *
+ * **Result Logging:**
+ * Use the `result` option to include successful return values in success logs.
+ * - `result: true` logs the raw returned value
+ * - `result: (value) => ...` logs a formatted value
  *
  * **Error Handling:**
  * - Axios errors are automatically prettified using `prettifyAxiosError` to provide structured error information
@@ -61,11 +69,9 @@ interface LogDecorator {
  * - Methods with no arguments
  *
  * @example
- * // Class-level usage - logs all methods
+ * // Class-level usage - logs all methods, logger auto-injected
  * @Log()
  * class UserService {
- *   readonly logger = new Logger(UserService.name)
- *
  *   createUser(name: string, email: string) {
  *     return { id: 1, name, email }
  *   }
@@ -78,8 +84,6 @@ interface LogDecorator {
  * @example
  * // Method-level usage - logs only specific method
  * class DataService {
- *   readonly logger = new Logger(DataService.name)
- *
  *   @Log({ onInvoke: true })
  *   async fetchData(id: number) {
  *     const data = await this.repository.findById(id)
@@ -91,8 +95,7 @@ interface LogDecorator {
  *     return 'helper'
  *   }
  * }
- *
- * @example
+ * 
  * // Error handling with regular errors
  * class PaymentService {
  *   readonly logger = new Logger(PaymentService.name)
@@ -138,17 +141,15 @@ interface LogDecorator {
  * @example
  * // Custom argument formatting - exclude large objects from logs
  * class SyncService {
- *   readonly logger = new Logger(SyncService.name)
- *
  *   @Log({ args: (loanId: number) => ({ loanId }) })
- *   async syncLoan(loanId: number, loanData?: CloudbankinLoan) {
+ *   async syncLoan(loanId: number, loanData?: unknown) {
  *     // loanData is excluded from logs due to large size
  *     // Only loanId will be logged
  *     return this.processLoan(loanId, loanData)
  *   }
- *
+ * 
  *   @Log({ args: (loanId: number, transactionId: number) => ({ loanId, transactionId }) })
- *   async syncPayment(loanId: number, transactionId: number, loanData?: CloudbankinLoan) {
+ *   async syncPayment(loanId: number, transactionId: number, loanData?: unknown) {
  *     // Only loanId and transactionId are logged, loanData is excluded
  *     return this.processPayment(loanId, transactionId, loanData)
  *   }
@@ -157,33 +158,36 @@ interface LogDecorator {
  * // Logs output:
  * // [SyncService] { method: 'syncLoan', state: 'success', args: { loanId: 123 } }
  * // [SyncService] { method: 'syncPayment', state: 'success', args: { loanId: 123, transactionId: 456 } }
- *
+ * 
  * @param options - Configuration options for the decorator
- * @throws {Error} If the logger property is not found in the class instance
- *
  * @returns Decorator function that can be applied to classes or methods
  */
-export const Log = <TArgs extends unknown[]>(options: LogOptions<TArgs> = {}): LogDecorator => {
-  // Cast to LogDecorator to enable overloaded signatures
-  return ((
-    target: LoggableConstructor | object,
-    propertyKey?: string,
-    descriptor?: PropertyDescriptor,
-  ): LoggableConstructor | PropertyDescriptor | void => {
-    // Class decorator receives 1 argument (constructor)
-    if (propertyKey === undefined) {
-      applyToClass(target as LoggableConstructor, options as LogOptions);
-      return target as LoggableConstructor;
-    }
-
-    // Method decorator receives 3 arguments (target, propertyKey, descriptor)
-    if (descriptor !== undefined) {
-      return applyToMethod(target, propertyKey, descriptor, options as LogOptions);
-    }
-
-    throw new Error('Log decorator can only be applied to classes or methods');
-  }) as LogDecorator;
-};
+export const Log = <TArgs extends unknown[], TResult = unknown>({
+  onInvoke: shouldLogInvoke = false,
+  args: formatArgs,
+  result: formatResult,
+}: LogOptions<TArgs, TResult> = {}): LogDecorator => 
+  Effect<unknown>(
+    ({ args, argsObject, target, propertyKey, className }) => {
+      const formattedArgs = formatArgs ? formatArgs(...(args as TArgs)) : argsObject;
+      const resultFormatter = typeof formatResult === 'function' ? formatResult : (value: TResult): TResult => value;
+      
+      const logger = createLogWrapper(target, className, String(propertyKey), formattedArgs);
+      
+      return {
+        onInvoke: shouldLogInvoke ? () => logger.invoked() : undefined,
+        onReturn: ({ result }) => {
+          logger.success(undefined, formatResult ? { result: resultFormatter(result as TResult) } : undefined);
+          return result;
+        },
+        onError: ({ error }) => { 
+          logger.error(error); 
+          throw error; 
+        },
+      };
+    },
+    NO_LOG_METADATA_KEY,
+  ) as LogDecorator;
 
 /**
  * Method decorator that prevents logging when used with class-level @Log()
@@ -196,8 +200,6 @@ export const Log = <TArgs extends unknown[]>(options: LogOptions<TArgs> = {}): L
  * @example
  * @Log()
  * class UserService {
- *   readonly logger = new Logger(UserService.name)
- *
  *   createUser(name: string) {
  *     // This will be logged
  *     return { name }
@@ -233,14 +235,7 @@ export const Log = <TArgs extends unknown[]>(options: LogOptions<TArgs> = {}): L
  *     return 'helper'
  *   }
  * }
- *
+ * 
  * @returns {MethodDecorator} The method decorator function
  */
-export const NoLog = () => {
-  return (_target: unknown, _propertyKey: string, descriptor: PropertyDescriptor) => {
-    // Mark this method as "no log" using a symbol
-    const value = descriptor.value as Record<string, unknown>;
-    value[NO_LOG_METADATA_KEY as unknown as string] = true;
-    return descriptor;
-  };
-};
+export const NoLog = (): MethodDecorator => SetMeta(NO_LOG_METADATA_KEY, true);
