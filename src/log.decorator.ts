@@ -126,7 +126,10 @@ export const Log = <TArgs extends unknown[], TResult = unknown>({
           logger.success(undefined, formatResult ? { result: resultFormatter(result as TResult) } : undefined);
           return result;
         },
-        onError: ({ error }) => { logger.error(error); throw error; },
+        onError: ({ error }) => { 
+          logger.error(error); 
+          throw error; 
+        },
       };
     },
     NO_LOG_METADATA_KEY,
