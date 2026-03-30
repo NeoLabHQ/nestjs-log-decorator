@@ -207,6 +207,23 @@ claude-json prompt json_schema="" label="claude-json":
     #!/usr/bin/env bash
     set -euo pipefail
     source claude-helpers.sh
+    _raw_claude_json() {
+      local prompt="$1"
+      local schema="${2:-}"
+      # shellcheck disable=SC2086
+      if [ -n "$schema" ]; then
+        claude -p "$prompt" \
+          --output-format json \
+          --verbose \
+          --json-schema "$schema" \
+          $PERMISSION_MODE
+      else
+        claude -p "$prompt" \
+          --output-format json \
+          --verbose \
+          $PERMISSION_MODE
+      fi
+    }
     run_with_session_retry "{{ label }}" _raw_claude_json "{{ prompt }}" '{{ json_schema }}'
 
 [doc("""
@@ -663,18 +680,39 @@ claude-vibe task-filename mode="":
 
   Steps:
     1. Load open PR comments and save as task files
-    2. Launch parallel agents to fix all comments
-    3. Run verify-and-fix loop (lint+test + review)
-    4. Clean up comment task files
-    5. Commit the changes
+    2. Combine related comments into focused task files
+    3. Launch parallel agents to fix all comments
+    4. Run verify-and-fix loop (lint+test + review)
+    5. Clean up comment task files
+    6. Commit the changes
+
+  Modes:
+    ""              - Run all steps 1-6
+    "continue-fix"  - Skip steps 1-2, start from step 3 (assumes .specs/comments/ already populated)
+
+  Parameters:
+    mode - Optional mode (see Modes above)
 
   Usage:
     just claude-fix-pr-comments
+    just claude-fix-pr-comments continue-fix
 """)]
 [no-exit-message]
-claude-fix-pr-comments:
+claude-fix-pr-comments mode="":
     #!/usr/bin/env bash
     set -euo pipefail
+
+    MODE="{{ mode }}"
+
+    # ── Validate mode parameter ──────────────────────────────────────
+    case "$MODE" in
+      ""|"continue-fix") ;;
+      *)
+        echo "ERROR: Unknown mode '$MODE'."
+        echo "Valid modes: '', 'continue-fix'"
+        exit 1
+        ;;
+    esac
 
     # ── Pre-check: GitHub CLI authentication ─────────────────────────
     if ! gh auth status &>/dev/null; then
@@ -697,17 +735,25 @@ claude-fix-pr-comments:
     echo ""
 
     # ── Step 1: Load PR comments ────────────────────────────────────
-    echo "==> Step 1: Loading PR comments"
-    mkdir -p .specs/comments
-    load_prompt="/pr-comments load ONLY open PR comments for current git branch from github and save it as separate md files to @.specs/comments/. Rewrite them as tasks, avoid summarising: write human feedback as requirements, if it not exists then claude fix suggestion as requirements, add claude issue description and link to the file and line as task context. (if they available). Do not duplicate issues!"
-    just claude "$load_prompt" "load-pr-comments"
-    echo ""
+    if [ "$MODE" = "continue-fix" ]; then
+      echo "==> Step 1: Skipped (mode=continue-fix)"
+    else
+      echo "==> Step 1: Loading PR comments"
+      mkdir -p .specs/comments
+      load_prompt="/pr-comments load ONLY open PR comments for current git branch from github and save it as separate md files to @.specs/comments/. Rewrite them as tasks, avoid summarising: write human feedback as requirements, if it not exists then claude fix suggestion as requirements, add claude issue description and link to the file and line as task context. (if they available). Do not duplicate issues!"
+      just claude "$load_prompt" "load-pr-comments"
+      echo ""
+    fi
 
     # ── Step 2: Combine comments ────────────────────────────────────
-    echo "==> Step 2: Combining PR comments"
-    combine_prompt="/sadd:do-and-judge Analyze and combine related comments or comments that impossible to do in parallel in @.specs/comments/ into a multiple md files. Avoid rewriting them, just combine text, avoid summarising. If there any nitpicks or one line changes, combine them in one aggregation also. Try to keep amount of files no more than 5, but do not combine too much unrelated changes! Each of them will be done by separate, parllel agents. As a result they should have own focused task to produce good result. After combining, delete old files that no longer relevant. CRITICAL: do not left comments folder in intermidiate state, when there are both combined files and their original copies!"
-    just claude "$combine_prompt" "combine-pr-comments"
-    echo ""
+    if [ "$MODE" = "continue-fix" ]; then
+      echo "==> Step 2: Skipped (mode=continue-fix)"
+    else
+      echo "==> Step 2: Combining PR comments"
+      combine_prompt="/sadd:do-and-judge Analyze and combine related comments or comments that impossible to do in parallel in @.specs/comments/ into a multiple md files. Avoid rewriting them, just combine text, avoid summarising. If there any nitpicks or one line changes, combine them in one aggregation also. Try to keep amount of files no more than 5, but do not combine too much unrelated changes! Each of them will be done by separate, parllel agents. As a result they should have own focused task to produce good result. After combining, delete old files that no longer relevant. CRITICAL: do not left comments folder in intermidiate state, when there are both combined files and their original copies!"
+      just claude "$combine_prompt" "combine-pr-comments"
+      echo ""
+    fi
 
     # ── Step 3: Fix comments ────────────────────────────────────────
     echo "==> Step 3: Fixing PR comments"
