@@ -95,16 +95,70 @@ interface LogDecorator {
  *     return 'helper'
  *   }
  * }
+ * 
+ * // Error handling with regular errors
+ * class PaymentService {
+ *   readonly logger = new Logger(PaymentService.name)
+ *
+ *   @Log()
+ *   processPayment(amount: number, currency: string) {
+ *     if (amount <= 0) {
+ *       throw new Error('Invalid amount')
+ *     }
+ *     return { status: 'success' }
+ *   }
+ * }
+ *
+ * // When error occurs:
+ * // [PaymentService] { method: 'processPayment', state: 'error', args: { amount: -10, currency: 'USD' }, error: Error(...) }
+ *
+ * @example
+ * // Error handling with Axios errors (automatically prettified)
+ * class ApiService {
+ *   readonly logger = new Logger(ApiService.name)
+ *
+ *   @Log()
+ *   async fetchData(url: string) {
+ *     const response = await this.httpClient.get(url)
+ *     return response.data
+ *   }
+ * }
+ *
+ * // When Axios error occurs:
+ * // [ApiService] {
+ * //   method: 'fetchData',
+ * //   state: 'error',
+ * //   args: { url: 'http://api.example.com/data' },
+ * //   error: {
+ * //     name: 'AxiosError',
+ * //     error: 'Request failed with status code 404',
+ * //     code: 'ERR_BAD_REQUEST',
+ * //     config: { method: 'get', url: 'http://api.example.com/data', ... },
+ * //     response: { status: 404, statusText: 'Not Found', data: ..., headers: ... }
+ * //   }
+ * // }
  *
  * @example
  * // Custom argument formatting - exclude large objects from logs
  * class SyncService {
  *   @Log({ args: (loanId: number) => ({ loanId }) })
  *   async syncLoan(loanId: number, loanData?: unknown) {
+ *     // loanData is excluded from logs due to large size
+ *     // Only loanId will be logged
  *     return this.processLoan(loanId, loanData)
+ *   }
+ * 
+ *   @Log({ args: (loanId: number, transactionId: number) => ({ loanId, transactionId }) })
+ *   async syncPayment(loanId: number, transactionId: number, loanData?: unknown) {
+ *     // Only loanId and transactionId are logged, loanData is excluded
+ *     return this.processPayment(loanId, transactionId, loanData)
  *   }
  * }
  *
+ * // Logs output:
+ * // [SyncService] { method: 'syncLoan', state: 'success', args: { loanId: 123 } }
+ * // [SyncService] { method: 'syncPayment', state: 'success', args: { loanId: 123, transactionId: 456 } }
+ * 
  * @param options - Configuration options for the decorator
  * @returns Decorator function that can be applied to classes or methods
  */
@@ -158,6 +212,30 @@ export const Log = <TArgs extends unknown[], TResult = unknown>({
  *   }
  * }
  *
+ * @example
+ * // With multiple @NoLog() methods
+ * @Log()
+ * class DataService {
+ *   readonly logger = new Logger(DataService.name)
+ *
+ *   fetchData(id: number) {
+ *     // Logged
+ *     return this.privateCalculation(id)
+ *   }
+ *
+ *   @NoLog()
+ *   privateCalculation(id: number) {
+ *     // Not logged
+ *     return id * 2
+ *   }
+ *
+ *   @NoLog()
+ *   anotherHelper() {
+ *     // Not logged
+ *     return 'helper'
+ *   }
+ * }
+ * 
  * @returns {MethodDecorator} The method decorator function
  */
 export const NoLog = (): MethodDecorator => SetMeta(NO_LOG_METADATA_KEY, true);
