@@ -16,10 +16,10 @@ This project uses **semantic-release** with **Conventional Commits**. Follow the
 
 **Core flow:**
 
-1. `@Log()` (src/log.decorator.ts) — Unified decorator that detects whether it's applied to a class or method via argument count, then delegates to `applyToClass` or `applyToMethod`.
-2. `applyToMethod` (src/decorate/applyToMethod.ts) — Wraps a single method: extracts parameter names from the function's `toString()` representation, builds an args object, creates a `LogWrapper`, and handles sync/async execution with success/error logging.
-3. `applyToClass` (src/decorate/applyToClass.ts) — Iterates all prototype methods (skipping constructor and `@NoLog()`-marked methods) and applies `applyToMethod` to each.
-4. `LogWrapper` (src/LogWrapper.ts) — Formats and outputs structured log entries (`invoked`, `success`, `error` states) through the NestJS Logger. Contains `createLogWrapper` (validates logger existence), `buildArgsObject` (maps param names to values), and `isLoggable` type guard.
+1. `@Log()` (src/log.decorator.ts) — Unified decorator that detects whether it's applied to a class or method via argument count, then delegates to `Effect` (class) or `EffectOnMethod` (method). Builds a `HooksOrFactory` function that creates a `LogWrapper` once per invocation and wires up `onInvoke`, `onReturn`, and `onError` hooks.
+2. `Effect` / `EffectOnMethod` / `EffectOnClass` (src/decorators/) — Logger-agnostic decorator primitives. `EffectOnMethod` wraps a single method: extracts parameter names, builds a `HookContext` (args object, target, propertyKey, descriptor, parameterNames, className), and invokes lifecycle hooks. `EffectOnClass` iterates prototype methods and applies `EffectOnMethod` to each. `Effect` dispatches to one or the other based on argument count.
+3. `buildArgsObject` (src/decorators/effect-on-method.ts) — Maps parameter names to their call-time values to produce the pre-built `args` object passed in every `HookContext`.
+4. `LogWrapper` (src/LogWrapper.ts) — Formats and outputs structured log entries (`invoked`, `success`, `error` states) through the NestJS Logger. Contains `createLogWrapper` (auto-injects a NestJS Logger when the instance has no `logger` property) and `isLoggable` type guard.
 5. `@NoLog()` — Marks methods with a Symbol to exclude them from class-level logging.
 
 **Axios handling:** The library has no runtime axios dependency. `src/axios/axios.stub.ts` defines local interfaces mirroring Axios types, and `isAxiosError` checks `payload.isAxiosError === true`. `prettifyAxiosError` in `axios.logger.ts` formats Axios errors with structured request/response data when detected.

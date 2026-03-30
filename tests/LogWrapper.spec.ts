@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Logger } from '@nestjs/common';
 
-import { createLogWrapper, isLoggable, buildArgsObject, LogWrapper } from '../src/LogWrapper';
+import { createLogWrapper, isLoggable, LogWrapper } from '../src/LogWrapper';
+import { buildArgsObject } from '../src/decorators';
 
 /**
  * Tests for LogWrapper auto-injection behavior (Step 6).

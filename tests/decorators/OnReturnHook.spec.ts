@@ -1,20 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import { AfterReturnHook } from '../../src/decorators/after-return.hook';
+import { OnReturnHook } from '../../src/decorators/on-return.hook';
 
-describe('AfterReturnHook', () => {
+describe('OnReturnHook', () => {
   describe('applied to a method', () => {
     it('should fire callback after sync method returns successfully', () => {
       const callOrder: string[] = [];
-      const callback = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: string) => {
-          callOrder.push('afterReturn');
-          return result;
-        },
-      );
+      const callback = vi.fn(({ result }: { result: string }) => {
+        callOrder.push('onReturn');
+        return result;
+      });
 
       class TestService {
-        @AfterReturnHook(callback)
+        @OnReturnHook(callback)
         greet(name: string) {
           callOrder.push('original');
           return `hello ${name}`;
@@ -26,20 +24,18 @@ describe('AfterReturnHook', () => {
 
       expect(result).toBe('hello world');
       expect(callback).toHaveBeenCalledOnce();
-      expect(callOrder).toEqual(['original', 'afterReturn']);
+      expect(callOrder).toEqual(['original', 'onReturn']);
     });
 
     it('should fire callback after async method resolves', async () => {
       const callOrder: string[] = [];
-      const callback = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => {
-          callOrder.push('afterReturn');
-          return result;
-        },
-      );
+      const callback = vi.fn(({ result }: { result: unknown }) => {
+        callOrder.push('onReturn');
+        return result;
+      });
 
       class TestService {
-        @AfterReturnHook(callback)
+        @OnReturnHook(callback)
         async fetchData(id: number) {
           callOrder.push('original');
           return { id };
@@ -51,18 +47,14 @@ describe('AfterReturnHook', () => {
 
       expect(result).toEqual({ id: 42 });
       expect(callback).toHaveBeenCalledOnce();
-      expect(callOrder).toEqual(['original', 'afterReturn']);
+      expect(callOrder).toEqual(['original', 'onReturn']);
     });
 
     it('should allow callback to transform the return value', () => {
-      const callback = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: string) => {
-          return `${result}-transformed`;
-        },
-      );
+      const callback = vi.fn(({ result }: { result: string }) => `${result}-transformed`);
 
       class TestService {
-        @AfterReturnHook(callback)
+        @OnReturnHook(callback)
         greet(name: string) {
           return `hello ${name}`;
         }
@@ -75,13 +67,11 @@ describe('AfterReturnHook', () => {
     });
 
     it('should not fire callback when method throws', () => {
-      const callback = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const callback = vi.fn(({ result }: { result: unknown }) => result);
       const testError = new Error('failure');
 
       class TestService {
-        @AfterReturnHook(callback)
+        @OnReturnHook(callback)
         failing() {
           throw testError;
         }
@@ -93,18 +83,10 @@ describe('AfterReturnHook', () => {
     });
 
     it('should pass args, target, propertyKey, result, and descriptor to callback', () => {
-      const callback = vi.fn(
-        (
-          _args: unknown[],
-          _t: object,
-          _k: string | symbol,
-          result: number,
-          _d: PropertyDescriptor,
-        ) => result,
-      );
+      const callback = vi.fn(({ result }: { result: number }) => result);
 
       class TestService {
-        @AfterReturnHook(callback)
+        @OnReturnHook(callback)
         add(a: number, b: number) {
           return a + b;
         }
@@ -115,23 +97,21 @@ describe('AfterReturnHook', () => {
 
       expect(callback).toHaveBeenCalledOnce();
 
-      const [args, target, propertyKey, result, descriptor] = callback.mock.calls[0];
-      expect(args).toEqual([3, 7]);
-      expect(target).toBe(service);
-      expect(propertyKey).toBe('add');
-      expect(result).toBe(10);
-      expect(descriptor).toBeDefined();
-      expect(typeof descriptor.value).toBe('function');
+      const [context] = callback.mock.calls[0];
+      expect(context.args).toEqual({ a: 3, b: 7 });
+      expect(context.target).toBe(service);
+      expect(context.propertyKey).toBe('add');
+      expect(context.result).toBe(10);
+      expect(context.descriptor).toBeDefined();
+      expect(typeof context.descriptor.value).toBe('function');
     });
   });
 
   describe('applied to a class', () => {
     it('should fire callback after each method returns', () => {
-      const callback = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const callback = vi.fn(({ result }: { result: unknown }) => result);
 
-      @AfterReturnHook(callback)
+      @OnReturnHook(callback)
       class TestService {
         methodA() {
           return 'a';

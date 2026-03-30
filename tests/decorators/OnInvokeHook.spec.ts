@@ -59,12 +59,12 @@ describe('OnInvokeHook', () => {
 
       expect(callback).toHaveBeenCalledOnce();
 
-      const [args, target, propertyKey, descriptor] = callback.mock.calls[0];
-      expect(args).toEqual([1, 'test']);
-      expect(target).toBe(service);
-      expect(propertyKey).toBe('doWork');
-      expect(descriptor).toBeDefined();
-      expect(typeof descriptor.value).toBe('function');
+      const [context] = callback.mock.calls[0];
+      expect(context.args).toEqual({ a: 1, b: 'test' });
+      expect(context.target).toBe(service);
+      expect(context.propertyKey).toBe('doWork');
+      expect(context.descriptor).toBeDefined();
+      expect(typeof context.descriptor.value).toBe('function');
     });
 
     it('should fire callback even when method throws', () => {

@@ -9,16 +9,16 @@ import type { EffectHooks } from '../../src/decorators/set-meta.decorator';
 
 describe('EffectOnMethod', () => {
   describe('sync method with all 4 hooks fires in correct order', () => {
-    it('should fire hooks in order: onInvoke, original, afterReturn, finally', () => {
+    it('should fire hooks in order: onInvoke, original, onReturn, finally', () => {
       const callOrder: string[] = [];
 
       const hooks: EffectHooks<string> = {
         onInvoke: () => callOrder.push('onInvoke'),
-        afterReturn: (_args, _target, _key, result) => {
-          callOrder.push('afterReturn');
+        onReturn: ({ result }) => {
+          callOrder.push('onReturn');
           return result;
         },
-        onError: (_args, _target, _key, error) => {
+        onError: ({ error }) => {
           callOrder.push('onError');
           throw error;
         },
@@ -37,7 +37,7 @@ describe('EffectOnMethod', () => {
       const result = service.greet('world');
 
       expect(result).toBe('hello world');
-      expect(callOrder).toEqual(['onInvoke', 'original', 'afterReturn', 'finally']);
+      expect(callOrder).toEqual(['onInvoke', 'original', 'onReturn', 'finally']);
     });
   });
 
@@ -48,11 +48,11 @@ describe('EffectOnMethod', () => {
 
       const hooks: EffectHooks = {
         onInvoke: () => callOrder.push('onInvoke'),
-        afterReturn: (_args, _target, _key, result) => {
-          callOrder.push('afterReturn');
+        onReturn: ({ result }) => {
+          callOrder.push('onReturn');
           return result;
         },
-        onError: (_args, _target, _key, error) => {
+        onError: ({ error }) => {
           callOrder.push('onError');
           throw error;
         },
@@ -74,16 +74,16 @@ describe('EffectOnMethod', () => {
   });
 
   describe('async method with all 4 hooks fires in correct order', () => {
-    it('should fire hooks in order: onInvoke, original, afterReturn, finally', async () => {
+    it('should fire hooks in order: onInvoke, original, onReturn, finally', async () => {
       const callOrder: string[] = [];
 
       const hooks: EffectHooks<string> = {
         onInvoke: () => callOrder.push('onInvoke'),
-        afterReturn: (_args, _target, _key, result) => {
-          callOrder.push('afterReturn');
+        onReturn: ({ result }) => {
+          callOrder.push('onReturn');
           return result;
         },
-        onError: (_args, _target, _key, error) => {
+        onError: ({ error }) => {
           callOrder.push('onError');
           throw error;
         },
@@ -102,7 +102,7 @@ describe('EffectOnMethod', () => {
       const result = await service.greetAsync('world');
 
       expect(result).toBe('hello world');
-      expect(callOrder).toEqual(['onInvoke', 'original', 'afterReturn', 'finally']);
+      expect(callOrder).toEqual(['onInvoke', 'original', 'onReturn', 'finally']);
     });
   });
 
@@ -113,11 +113,11 @@ describe('EffectOnMethod', () => {
 
       const hooks: EffectHooks = {
         onInvoke: () => callOrder.push('onInvoke'),
-        afterReturn: (_args, _target, _key, result) => {
-          callOrder.push('afterReturn');
+        onReturn: ({ result }) => {
+          callOrder.push('onReturn');
           return result;
         },
-        onError: (_args, _target, _key, error) => {
+        onError: ({ error }) => {
           callOrder.push('onError');
           throw error;
         },
@@ -157,14 +157,12 @@ describe('EffectOnMethod', () => {
     });
   });
 
-  describe('only afterReturn hook provided', () => {
-    it('should fire afterReturn after method completes', () => {
-      const afterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: number) => result * 2,
-      );
+  describe('only onReturn hook provided', () => {
+    it('should fire onReturn after method completes', () => {
+      const onReturn = vi.fn(({ result }: { result: number }) => result * 2);
 
       class TestService {
-        @EffectOnMethod({ afterReturn })
+        @EffectOnMethod({ onReturn })
         compute(a: number, b: number) {
           return a + b;
         }
@@ -174,18 +172,14 @@ describe('EffectOnMethod', () => {
       const result = service.compute(3, 5);
 
       expect(result).toBe(16);
-      expect(afterReturn).toHaveBeenCalledOnce();
+      expect(onReturn).toHaveBeenCalledOnce();
     });
   });
 
   describe('onError hook receives the thrown error', () => {
     it('should pass the error to onError hook', () => {
       const testError = new Error('specific error');
-      const onError = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, error: unknown) => {
-          throw error;
-        },
-      );
+      const onError = vi.fn(({ error }: { error: unknown }) => { throw error; });
 
       class TestService {
         @EffectOnMethod({ onError })
@@ -197,7 +191,7 @@ describe('EffectOnMethod', () => {
       const service = new TestService();
       expect(() => service.failing()).toThrow(testError);
       expect(onError).toHaveBeenCalledOnce();
-      expect(onError.mock.calls[0][3]).toBe(testError);
+      expect(onError.mock.calls[0][0].error).toBe(testError);
     });
   });
 
@@ -263,11 +257,11 @@ describe('EffectOnMethod', () => {
     });
   });
 
-  describe('afterReturn return value replaces method result', () => {
-    it('should replace sync method result with afterReturn value', () => {
+  describe('onReturn return value replaces method result', () => {
+    it('should replace sync method result with onReturn value', () => {
       class TestService {
         @EffectOnMethod({
-          afterReturn: (_args, _t, _k, _result) => 'replaced',
+          onReturn: () => 'replaced',
         })
         original() {
           return 'original';
@@ -278,10 +272,10 @@ describe('EffectOnMethod', () => {
       expect(service.original()).toBe('replaced');
     });
 
-    it('should replace async method result with afterReturn value', async () => {
+    it('should replace async method result with onReturn value', async () => {
       class TestService {
         @EffectOnMethod({
-          afterReturn: (_args, _t, _k, _result) => 'replaced',
+          onReturn: () => 'replaced',
         })
         async originalAsync() {
           return 'original';
@@ -295,14 +289,12 @@ describe('EffectOnMethod', () => {
 
   describe('this context is correct inside wrapped method', () => {
     it('should preserve this context for sync methods', () => {
-      const afterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const onReturn = vi.fn(({ result }: { result: unknown }) => result);
 
       class TestService {
         value = 42;
 
-        @EffectOnMethod({ afterReturn })
+        @EffectOnMethod({ onReturn })
         getValue() {
           return this.value;
         }
@@ -317,7 +309,7 @@ describe('EffectOnMethod', () => {
         value = 'async-value';
 
         @EffectOnMethod({
-          afterReturn: (_args, _t, _k, result) => result,
+          onReturn: ({ result }) => result,
         })
         async getValueAsync() {
           return this.value;
@@ -392,12 +384,12 @@ describe('EffectOnMethod', () => {
   });
 
   describe('hook that throws propagates error to caller', () => {
-    it('should propagate afterReturn hook error', () => {
+    it('should propagate onReturn hook error', () => {
       const hookError = new Error('hook failure');
 
       class TestService {
         @EffectOnMethod({
-          afterReturn: () => {
+          onReturn: () => {
             throw hookError;
           },
         })
@@ -410,12 +402,12 @@ describe('EffectOnMethod', () => {
       expect(() => service.succeed()).toThrow(hookError);
     });
 
-    it('should propagate async afterReturn hook error', async () => {
+    it('should propagate async onReturn hook error', async () => {
       const hookError = new Error('async hook failure');
 
       class TestService {
         @EffectOnMethod({
-          afterReturn: () => {
+          onReturn: () => {
             throw hookError;
           },
         })
@@ -488,21 +480,19 @@ describe('EffectOnMethod', () => {
       service.greet('Alice', 30);
 
       expect(onInvoke).toHaveBeenCalledOnce();
-      const [args, target, propertyKey, descriptor] = onInvoke.mock.calls[0];
-      expect(args).toEqual(['Alice', 30]);
-      expect(target).toBe(service);
-      expect(propertyKey).toBe('greet');
-      expect(descriptor).toBeDefined();
-      expect(typeof descriptor.value).toBe('function');
+      const [context] = onInvoke.mock.calls[0];
+      expect(context.args).toEqual({ name: 'Alice', age: 30 });
+      expect(context.target).toBe(service);
+      expect(context.propertyKey).toBe('greet');
+      expect(context.descriptor).toBeDefined();
+      expect(typeof context.descriptor.value).toBe('function');
     });
 
-    it('should pass correct arguments to afterReturn', () => {
-      const afterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: string, _d: PropertyDescriptor) => result,
-      );
+    it('should pass correct arguments to onReturn', () => {
+      const onReturn = vi.fn(({ result }: { result: string }) => result);
 
       class TestService {
-        @EffectOnMethod({ afterReturn })
+        @EffectOnMethod({ onReturn })
         greet(name: string) {
           return `hello ${name}`;
         }
@@ -511,22 +501,18 @@ describe('EffectOnMethod', () => {
       const service = new TestService();
       service.greet('Bob');
 
-      expect(afterReturn).toHaveBeenCalledOnce();
-      const [args, target, propertyKey, result, descriptor] = afterReturn.mock.calls[0];
-      expect(args).toEqual(['Bob']);
-      expect(target).toBe(service);
-      expect(propertyKey).toBe('greet');
-      expect(result).toBe('hello Bob');
-      expect(descriptor).toBeDefined();
+      expect(onReturn).toHaveBeenCalledOnce();
+      const [context] = onReturn.mock.calls[0];
+      expect(context.args).toEqual({ name: 'Bob' });
+      expect(context.target).toBe(service);
+      expect(context.propertyKey).toBe('greet');
+      expect(context.result).toBe('hello Bob');
+      expect(context.descriptor).toBeDefined();
     });
 
     it('should pass correct arguments to onError', () => {
       const testError = new Error('test');
-      const onError = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, error: unknown, _d: PropertyDescriptor) => {
-          throw error;
-        },
-      );
+      const onError = vi.fn(({ error }: { error: unknown }) => { throw error; });
 
       class TestService {
         @EffectOnMethod({ onError })
@@ -539,12 +525,12 @@ describe('EffectOnMethod', () => {
       expect(() => service.failing('data')).toThrow(testError);
 
       expect(onError).toHaveBeenCalledOnce();
-      const [args, target, propertyKey, error, descriptor] = onError.mock.calls[0];
-      expect(args).toEqual(['data']);
-      expect(target).toBe(service);
-      expect(propertyKey).toBe('failing');
-      expect(error).toBe(testError);
-      expect(descriptor).toBeDefined();
+      const [context] = onError.mock.calls[0];
+      expect(context.args).toEqual({ input: 'data' });
+      expect(context.target).toBe(service);
+      expect(context.propertyKey).toBe('failing');
+      expect(context.error).toBe(testError);
+      expect(context.descriptor).toBeDefined();
     });
 
     it('should pass correct arguments to finally hook', () => {
@@ -561,11 +547,11 @@ describe('EffectOnMethod', () => {
       service.greet('Charlie');
 
       expect(finallyHook).toHaveBeenCalledOnce();
-      const [args, target, propertyKey, descriptor] = finallyHook.mock.calls[0];
-      expect(args).toEqual(['Charlie']);
-      expect(target).toBe(service);
-      expect(propertyKey).toBe('greet');
-      expect(descriptor).toBeDefined();
+      const [context] = finallyHook.mock.calls[0];
+      expect(context.args).toEqual({ name: 'Charlie' });
+      expect(context.target).toBe(service);
+      expect(context.propertyKey).toBe('greet');
+      expect(context.descriptor).toBeDefined();
     });
   });
 
@@ -626,6 +612,173 @@ describe('EffectOnMethod', () => {
 
       const service = new TestService();
       expect(await service.failingAsync()).toBe('recovered');
+    });
+  });
+
+  describe('async hook optimization: .then/.catch only attached when hooks defined', () => {
+    it('should not attach .then when onReturn is undefined (async success path)', async () => {
+      const onInvoke = vi.fn();
+
+      class TestService {
+        @EffectOnMethod({ onInvoke })
+        async fetchData(id: number) {
+          return { id, data: 'result' };
+        }
+      }
+
+      const service = new TestService();
+      const result = await service.fetchData(42);
+
+      expect(result).toEqual({ id: 42, data: 'result' });
+      expect(onInvoke).toHaveBeenCalledOnce();
+    });
+
+    it('should not attach .catch when onError is undefined (async error path)', async () => {
+      const testError = new Error('unhandled async error');
+
+      class TestService {
+        @EffectOnMethod({})
+        async failingAsync() {
+          throw testError;
+        }
+      }
+
+      const service = new TestService();
+      await expect(service.failingAsync()).rejects.toThrow(testError);
+    });
+
+    it('should attach only .then when only onReturn is defined (no onError)', async () => {
+      const onReturn = vi.fn(({ result }: { result: unknown }) => result);
+
+      class TestService {
+        @EffectOnMethod({ onReturn })
+        async fetchData(id: number) {
+          return { id };
+        }
+      }
+
+      const service = new TestService();
+      const result = await service.fetchData(1);
+
+      expect(result).toEqual({ id: 1 });
+      expect(onReturn).toHaveBeenCalledOnce();
+    });
+
+    it('should attach only .catch when only onError is defined (no onReturn)', async () => {
+      const testError = new Error('async error');
+      const onError = vi.fn(({ error }: { error: unknown }) => { throw error; });
+
+      class TestService {
+        @EffectOnMethod({ onError })
+        async failingAsync() {
+          throw testError;
+        }
+      }
+
+      const service = new TestService();
+      await expect(service.failingAsync()).rejects.toThrow(testError);
+      expect(onError).toHaveBeenCalledOnce();
+    });
+
+    it('should work with empty hooks on async method (no .then/.catch/.finally)', async () => {
+      class TestService {
+        @EffectOnMethod({})
+        async computeAsync(a: number, b: number) {
+          return a + b;
+        }
+      }
+
+      const service = new TestService();
+      expect(await service.computeAsync(10, 20)).toBe(30);
+    });
+  });
+
+  describe('exclusionKey parameter', () => {
+    it('should mark method with EFFECT_APPLIED_KEY by default', () => {
+      class TestService {
+        @EffectOnMethod({})
+        myMethod() {
+          return 'result';
+        }
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(
+        TestService.prototype,
+        'myMethod',
+      )!;
+
+      expect(getMeta<boolean>(EFFECT_APPLIED_KEY, descriptor)).toBe(true);
+    });
+
+    it('should mark method with custom exclusionKey when provided', () => {
+      const CUSTOM_KEY = Symbol('customApplied');
+
+      class TestService {
+        myMethod() {
+          return 'result';
+        }
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(
+        TestService.prototype,
+        'myMethod',
+      )!;
+
+      EffectOnMethod({}, CUSTOM_KEY)(TestService.prototype, 'myMethod', descriptor);
+
+      // Custom key should be set
+      expect(getMeta<boolean>(CUSTOM_KEY, descriptor)).toBe(true);
+      // Default EFFECT_APPLIED_KEY should NOT be set
+      expect(getMeta<boolean>(EFFECT_APPLIED_KEY, descriptor)).toBeUndefined();
+    });
+
+    it('should allow independent decorators with different exclusionKeys', () => {
+      const LOG_KEY = Symbol('logApplied');
+      const METRICS_KEY = Symbol('metricsApplied');
+
+      const logOnReturn = vi.fn(({ result }: { result: unknown }) => result);
+      const metricsOnReturn = vi.fn(({ result }: { result: unknown }) => result);
+
+      class TestService {
+        myMethod() {
+          return 'result';
+        }
+      }
+
+      const descriptor = Object.getOwnPropertyDescriptor(
+        TestService.prototype,
+        'myMethod',
+      )!;
+
+      // Apply "Log" decorator with LOG_KEY
+      EffectOnMethod({ onReturn: logOnReturn }, LOG_KEY)(
+        TestService.prototype,
+        'myMethod',
+        descriptor,
+      );
+      // Apply "Metrics" decorator with METRICS_KEY
+      EffectOnMethod({ onReturn: metricsOnReturn }, METRICS_KEY)(
+        TestService.prototype,
+        'myMethod',
+        descriptor,
+      );
+
+      Object.defineProperty(TestService.prototype, 'myMethod', descriptor);
+
+      const service = new TestService();
+      service.myMethod();
+
+      // Both decorators should have fired (no interference)
+      expect(logOnReturn).toHaveBeenCalledOnce();
+      expect(metricsOnReturn).toHaveBeenCalledOnce();
+
+      // Both keys should be set on the method
+      const finalDescriptor = Object.getOwnPropertyDescriptor(
+        TestService.prototype,
+        'myMethod',
+      )!;
+      expect(getMeta<boolean>(LOG_KEY, finalDescriptor)).toBe(true);
+      expect(getMeta<boolean>(METRICS_KEY, finalDescriptor)).toBe(true);
     });
   });
 });

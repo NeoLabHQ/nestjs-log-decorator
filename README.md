@@ -480,7 +480,7 @@ import {
   setMeta,
   EFFECT_APPLIED_KEY,
   OnInvokeHook,
-  AfterReturnHook,
+  OnReturnHook,
   OnErrorHook,
   FinallyHook,
 } from 'nestjs-log-decorator';
@@ -496,7 +496,7 @@ import {
 | `setMeta` | Function | Programmatically set metadata on functions |
 | `EFFECT_APPLIED_KEY` | Symbol | Key used to mark methods as already decorated |
 | `OnInvokeHook` | Decorator | Convenience hook for `onInvoke` |
-| `AfterReturnHook` | Decorator | Convenience hook for `afterReturn` |
+| `OnReturnHook` | Decorator | Convenience hook for `onReturn` |
 | `OnErrorHook` | Decorator | Convenience hook for `onError` |
 | `FinallyHook` | Decorator | Convenience hook for `finally` |
 

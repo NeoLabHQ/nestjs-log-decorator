@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { Effect } from '../../src/decorators/effect.decorator';
-import { SetMeta } from '../../src/decorators/set-meta.decorator';
+import { SetMeta, getMeta } from '../../src/decorators/set-meta.decorator';
 import type { EffectHooks } from '../../src/decorators/set-meta.decorator';
 
 describe('Effect', () => {
@@ -11,8 +11,8 @@ describe('Effect', () => {
 
       const hooks: EffectHooks<string> = {
         onInvoke: () => callOrder.push('onInvoke'),
-        afterReturn: (_args, _t, _k, result) => {
-          callOrder.push('afterReturn');
+        onReturn: ({ result }) => {
+          callOrder.push('onReturn');
           return result;
         },
         finally: () => callOrder.push('finally'),
@@ -30,16 +30,14 @@ describe('Effect', () => {
       const result = service.greet('world');
 
       expect(result).toBe('hello world');
-      expect(callOrder).toEqual(['onInvoke', 'original', 'afterReturn', 'finally']);
+      expect(callOrder).toEqual(['onInvoke', 'original', 'onReturn', 'finally']);
     });
 
     it('should fire hooks correctly for async method', async () => {
-      const afterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const onReturn = vi.fn(({ result }: { result: unknown }) => result);
 
       class TestService {
-        @Effect({ afterReturn })
+        @Effect({ onReturn })
         async fetchData(id: number) {
           return { id, name: 'test' };
         }
@@ -49,16 +47,12 @@ describe('Effect', () => {
       const result = await service.fetchData(42);
 
       expect(result).toEqual({ id: 42, name: 'test' });
-      expect(afterReturn).toHaveBeenCalledOnce();
+      expect(onReturn).toHaveBeenCalledOnce();
     });
 
     it('should fire onError hook when method throws', () => {
       const testError = new Error('method failure');
-      const onError = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, error: unknown) => {
-          throw error;
-        },
-      );
+      const onError = vi.fn(({ error }: { error: unknown }) => { throw error; });
 
       class TestService {
         @Effect({ onError })
@@ -70,17 +64,15 @@ describe('Effect', () => {
       const service = new TestService();
       expect(() => service.failing()).toThrow(testError);
       expect(onError).toHaveBeenCalledOnce();
-      expect(onError.mock.calls[0][3]).toBe(testError);
+      expect(onError.mock.calls[0][0].error).toBe(testError);
     });
   });
 
   describe('applied to a class', () => {
     it('should wrap all methods and fire hooks for each', () => {
-      const afterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const onReturn = vi.fn(({ result }: { result: unknown }) => result);
 
-      @Effect({ afterReturn })
+      @Effect({ onReturn })
       class TestService {
         methodA() {
           return 'a';
@@ -95,7 +87,7 @@ describe('Effect', () => {
       expect(service.methodA()).toBe('a');
       expect(service.methodB()).toBe('b');
 
-      expect(afterReturn).toHaveBeenCalledTimes(2);
+      expect(onReturn).toHaveBeenCalledTimes(2);
     });
 
     it('should not wrap the constructor', () => {
@@ -129,11 +121,11 @@ describe('Effect', () => {
 
       const hooks: EffectHooks<string> = {
         onInvoke: () => callOrder.push('onInvoke'),
-        afterReturn: (_args, _t, _k, result) => {
-          callOrder.push('afterReturn');
+        onReturn: ({ result }) => {
+          callOrder.push('onReturn');
           return result;
         },
-        onError: (_args, _t, _k, error) => {
+        onError: ({ error }) => {
           callOrder.push('onError');
           throw error;
         },
@@ -152,22 +144,18 @@ describe('Effect', () => {
       const result = service.greet('world');
 
       expect(result).toBe('hello world');
-      expect(callOrder).toEqual(['onInvoke', 'original', 'afterReturn', 'finally']);
+      expect(callOrder).toEqual(['onInvoke', 'original', 'onReturn', 'finally']);
     });
   });
 
   describe('double-logging prevention: class-level + method-level Effect on same method', () => {
     it('should fire hooks exactly once when both class and method Effect are applied (method wins)', () => {
-      const classAfterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
-      const methodAfterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const classOnReturn = vi.fn(({ result }: { result: unknown }) => result);
+      const methodOnReturn = vi.fn(({ result }: { result: unknown }) => result);
 
-      @Effect({ afterReturn: classAfterReturn })
+      @Effect({ onReturn: classOnReturn })
       class TestService {
-        @Effect({ afterReturn: methodAfterReturn })
+        @Effect({ onReturn: methodOnReturn })
         decoratedMethod() {
           return 'result';
         }
@@ -182,9 +170,9 @@ describe('Effect', () => {
       service.plainMethod();
 
       // Method-level Effect fires for decoratedMethod
-      expect(methodAfterReturn).toHaveBeenCalledOnce();
+      expect(methodOnReturn).toHaveBeenCalledOnce();
       // Class-level Effect fires only for plainMethod (skips decoratedMethod due to EFFECT_APPLIED_KEY)
-      expect(classAfterReturn).toHaveBeenCalledOnce();
+      expect(classOnReturn).toHaveBeenCalledOnce();
     });
 
     it('should fire method-level hooks only once for async methods with both decorators', async () => {
@@ -214,19 +202,13 @@ describe('Effect', () => {
     });
 
     it('should produce correct results when method-level Effect wins', () => {
-      const methodAfterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: string) => {
-          return `${result}-method-processed`;
-        },
-      );
+      const methodOnReturn = vi.fn(({ result }: { result: string }) => `${result}-method-processed`);
 
       @Effect({
-        afterReturn: (_args, _t, _k, result) => {
-          return `${result}-class-processed`;
-        },
+        onReturn: ({ result }: { result: string }) => `${result}-class-processed`,
       })
       class TestService {
-        @Effect({ afterReturn: methodAfterReturn })
+        @Effect({ onReturn: methodOnReturn })
         targeted() {
           return 'base';
         }
@@ -248,11 +230,9 @@ describe('Effect', () => {
   describe('exclusionKey support', () => {
     it('should skip methods marked with exclusionKey when applied to a class', () => {
       const EXCLUSION_KEY = Symbol('noEffect');
-      const afterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const onReturn = vi.fn(({ result }: { result: unknown }) => result);
 
-      @Effect({ afterReturn }, EXCLUSION_KEY)
+      @Effect({ onReturn }, EXCLUSION_KEY)
       class TestService {
         @SetMeta(EXCLUSION_KEY, true)
         excluded() {
@@ -268,19 +248,16 @@ describe('Effect', () => {
       service.excluded();
       service.included();
 
-      // afterReturn fires only for 'included'
-      expect(afterReturn).toHaveBeenCalledOnce();
+      // onReturn fires only for 'included'
+      expect(onReturn).toHaveBeenCalledOnce();
     });
 
-    it('should ignore exclusionKey when applied to a method (method-level has no exclusion)', () => {
+    it('should mark method with exclusionKey when applied at method level', () => {
       const EXCLUSION_KEY = Symbol('noEffect');
-      const afterReturn = vi.fn(
-        (_args: unknown[], _t: object, _k: string | symbol, result: unknown) => result,
-      );
+      const onReturn = vi.fn(({ result }: { result: unknown }) => result);
 
-      // When Effect is used as a method decorator, exclusionKey is irrelevant
       class TestService {
-        @Effect({ afterReturn }, EXCLUSION_KEY)
+        @Effect({ onReturn }, EXCLUSION_KEY)
         myMethod() {
           return 'result';
         }
@@ -290,7 +267,41 @@ describe('Effect', () => {
       const result = service.myMethod();
 
       expect(result).toBe('result');
-      expect(afterReturn).toHaveBeenCalledOnce();
+      expect(onReturn).toHaveBeenCalledOnce();
+
+      // Method should be marked with the custom exclusionKey
+      const descriptor = Object.getOwnPropertyDescriptor(
+        TestService.prototype,
+        'myMethod',
+      )!;
+      expect(getMeta<boolean>(EXCLUSION_KEY, descriptor)).toBe(true);
+    });
+
+    it('should prevent double-wrap when class and method use same exclusionKey', () => {
+      const EXCLUSION_KEY = Symbol('customEffect');
+      const classOnReturn = vi.fn(({ result }: { result: unknown }) => result);
+      const methodOnReturn = vi.fn(({ result }: { result: unknown }) => result);
+
+      @Effect({ onReturn: classOnReturn }, EXCLUSION_KEY)
+      class TestService {
+        @Effect({ onReturn: methodOnReturn }, EXCLUSION_KEY)
+        decoratedMethod() {
+          return 'result';
+        }
+
+        plainMethod() {
+          return 'plain';
+        }
+      }
+
+      const service = new TestService();
+      service.decoratedMethod();
+      service.plainMethod();
+
+      // Method-level fires for decoratedMethod
+      expect(methodOnReturn).toHaveBeenCalledOnce();
+      // Class-level skips decoratedMethod (same exclusionKey), fires for plainMethod
+      expect(classOnReturn).toHaveBeenCalledOnce();
     });
   });
 

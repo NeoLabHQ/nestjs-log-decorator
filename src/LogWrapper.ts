@@ -102,34 +102,3 @@ export const createLogWrapper = (
   return new LogWrapper((instance as Loggable).logger, methodName, argsObject);
 };
 
-/**
- * Builds an object mapping parameter names to their values.
- *
- * Creates a record where keys are parameter names and values are the
- * corresponding argument values passed to the function.
- *
- * @param parameterNames - Array of parameter names
- * @param args - Array of argument values
- * @returns Object mapping parameter names to values
- *
- * @example
- * buildArgsObject(['id', 'name'], [1, 'John'])
- * // Returns: { id: 1, name: 'John' }
- *
- * @internal
- */
-export const buildArgsObject = (parameterNames: string[], args: unknown[]): Record<string, unknown> | undefined => {
-  if (args.length === 0 && parameterNames.length === 0) {
-    return undefined;
-  }
-
-  const argsObject: Record<string, unknown> = {};
-
-  parameterNames.forEach((paramName, index) => {
-    if (index < args.length) {
-      argsObject[paramName] = args[index];
-    }
-  });
-
-  return argsObject;
-};

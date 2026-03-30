@@ -1,21 +1,5 @@
-/**
- * Lifecycle hook decorator that fires a callback when the method throws.
- *
- * Delegates to {@link Effect} with only the `onError` hook set. Works on
- * both classes (wrapping every eligible prototype method) and individual
- * methods, inheriting all class/method dispatch logic from `Effect`.
- *
- * The callback receives the raw arguments array, the `this` target object,
- * the property key, the thrown error, and the property descriptor. It may
- * return a recovery value or re-throw the error.
- *
- * This module is logger-agnostic and contains zero imports from `@nestjs/common`.
- *
- * @module on-error.hook
- */
-
 import { Effect } from './effect.decorator';
-import type { OnErrorHookType } from './set-meta.decorator';
+import type { OnErrorHookType } from './hook.types';
 
 /**
  * Creates a decorator that invokes `callback` when the decorated method
@@ -29,8 +13,8 @@ import type { OnErrorHookType } from './set-meta.decorator';
  * @example
  * ```ts
  * class Service {
- *   \@OnErrorHook((args, target, key, error) => {
- *     console.error(key, 'failed:', error);
+ *   \@OnErrorHook(({ propertyKey, error }) => {
+ *     console.error(propertyKey, 'failed:', error);
  *     throw error; // re-throw after logging
  *   })
  *   riskyOperation() { throw new Error('oops'); }

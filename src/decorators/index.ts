@@ -13,20 +13,14 @@
  * @module decorators
  */
 
-export { SetMeta, getMeta, setMeta } from './set-meta.decorator';
-export type {
-  EffectHooks,
-  OnInvokeHookType,
-  AfterReturnHookType,
-  OnErrorHookType,
-  FinallyHookType,
-} from './set-meta.decorator';
-export { EffectOnMethod, EFFECT_APPLIED_KEY } from './effect-on-method';
-export { EffectOnClass } from './effect-on-class';
-export { Effect } from './effect.decorator';
+export * from './set-meta.decorator';
+export type * from './hook.types';
+export * from './effect-on-method';
+export * from './effect-on-class';
+export * from './effect.decorator';
 
 // Hook decorator functions (values)
-export { OnInvokeHook } from './on-invoke.hook';
-export { AfterReturnHook } from './after-return.hook';
-export { OnErrorHook } from './on-error.hook';
-export { FinallyHook } from './finally.hook';
+export * from './on-invoke.hook';
+export * from './on-return.hook';
+export * from './on-error.hook';
+export * from './finally.hook';

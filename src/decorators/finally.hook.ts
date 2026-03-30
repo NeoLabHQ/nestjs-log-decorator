@@ -1,21 +1,5 @@
-/**
- * Lifecycle hook decorator that fires a callback after method execution
- * regardless of whether it succeeded or threw.
- *
- * Delegates to {@link Effect} with only the `finally` hook set. Works on
- * both classes (wrapping every eligible prototype method) and individual
- * methods, inheriting all class/method dispatch logic from `Effect`.
- *
- * The callback receives the raw arguments array, the `this` target object,
- * the property key, and the property descriptor.
- *
- * This module is logger-agnostic and contains zero imports from `@nestjs/common`.
- *
- * @module finally.hook
- */
-
 import { Effect } from './effect.decorator';
-import type { FinallyHookType } from './set-meta.decorator';
+import type { FinallyHookType } from './hook.types';
 
 /**
  * Creates a decorator that invokes `callback` after every method execution,
@@ -28,7 +12,7 @@ import type { FinallyHookType } from './set-meta.decorator';
  * @example
  * ```ts
  * class Service {
- *   \@FinallyHook((args, target, key) => console.log(key, 'completed'))
+ *   \@FinallyHook(({ propertyKey, args }) => console.log(propertyKey, 'completed', args))
  *   doWork(input: string) { return input.toUpperCase(); }
  * }
  * ```

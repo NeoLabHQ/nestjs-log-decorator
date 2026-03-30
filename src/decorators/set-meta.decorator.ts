@@ -1,84 +1,14 @@
-/**
- * Symbol-keyed metadata storage primitives for decorator infrastructure.
- *
- * Stores metadata as a Map on function objects under a non-enumerable
- * `_symMeta` property. This approach avoids `reflect-metadata` dependency
- * and allows multiple metadata keys to coexist on the same function.
- *
- * @module set-meta.decorator
- */
-
-/**
- * Hook fired before the original method executes.
- * @typeParam R - The return type of the decorated method (unused, for consistency)
- */
-export type OnInvokeHookType<R = unknown> = (
-  args: unknown[],
-  target: object,
-  propertyKey: string | symbol,
-  descriptor: PropertyDescriptor,
-) => void;
-
-/**
- * Hook fired after a successful return. Its return value replaces the method result.
- * @typeParam R - The return type of the decorated method
- */
-export type AfterReturnHookType<R = unknown> = (
-  args: unknown[],
-  target: object,
-  propertyKey: string | symbol,
-  result: R,
-  descriptor: PropertyDescriptor,
-) => R;
-
-/**
- * Hook fired when the method throws. May return a recovery value or re-throw.
- * @typeParam R - The return type of the decorated method
- */
-export type OnErrorHookType<R = unknown> = (
-  args: unknown[],
-  target: object,
-  propertyKey: string | symbol,
-  error: unknown,
-  descriptor: PropertyDescriptor,
-) => R;
-
-/**
- * Hook fired after both success and error paths, regardless of outcome.
- * @typeParam R - The return type of the decorated method (unused, for consistency)
- */
-export type FinallyHookType<R = unknown> = (
-  args: unknown[],
-  target: object,
-  propertyKey: string | symbol,
-  descriptor: PropertyDescriptor,
-) => void;
-
-/**
- * Lifecycle hooks for method decoration via Effect-based decorators.
- *
- * Each hook receives the raw arguments array, the `this` target object,
- * the property key, and the property descriptor. Hooks are optional --
- * omitting a hook simply skips that lifecycle point.
- *
- * @typeParam R - The return type of the decorated method
- */
-export interface EffectHooks<R = unknown> {
-  /** Fires before the original method executes. */
-  onInvoke?: OnInvokeHookType<R>;
-
-  /** Fires after a successful return. Its return value replaces the method result. */
-  afterReturn?: AfterReturnHookType<R>;
-
-  /** Fires when the method throws. May return a recovery value or re-throw. */
-  onError?: OnErrorHookType<R>;
-
-  /** Fires after both success and error paths, regardless of outcome. */
-  finally?: FinallyHookType<R>;
-}
+export type {
+  HookArgs,
+  OnInvokeHookType,
+  OnReturnHookType,
+  OnErrorHookType,
+  FinallyHookType,
+  EffectHooks,
+} from './hook.types';
 
 /** Internal key used to store the metadata Map on function objects. */
-const SYM_META_PROP = '_symMeta';
+export const SYM_META_PROP = '_symMeta';
 
 /**
  * Stores a symbol-keyed metadata value on the function referenced by
