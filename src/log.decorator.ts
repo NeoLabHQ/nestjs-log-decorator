@@ -1,4 +1,4 @@
-import { Effect, SetMeta } from './decorators';
+import { Effect, SetMeta } from 'base-decorators';
 import { createLogWrapper } from './LogWrapper';
 import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
 

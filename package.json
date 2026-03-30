@@ -2,7 +2,7 @@
   "name": "nestjs-log-decorator",
   "version": "1.4.0",
   "description": "Decorator that removes try catch boilerplate logging from NestJS service methods",
-  "author": "Vlad Goncharov <leovs010@gmail.com>",
+  "author": "Vlad Goncharov <vlad.goncharov@neolab.com>",
   "license": "AGPL-3.0",
   "homepage": "https://github.com/NeoLabHQ/nestjs-log-decorator#readme",
   "repository": {
@@ -24,13 +24,17 @@
   "scripts": {
     "build": "tsdown",
     "build:watch": "tsdown --watch",
-    "dev": "concurrently -c auto --names build,test npm:build:watch npm:test",
+    "dev": "concurrently -c auto --names build,test npm:build:watch npm:test:watch",
     "lint": "npm run typecheck",
     "test": "vitest --run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "commit": "cz help",
     "cz": "git add . && cz"
+  },
+  "dependencies": {
+    "base-decorators": "^0.1.1"
   },
   "devDependencies": {
     "@semantic-release/git": "^10.0.1",
@@ -50,5 +54,14 @@
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
     }
-  }
+  },
+  "keywords": [
+    "decorator",
+    "decorators",
+    "library",
+    "nestjs",
+    "typescript",
+    "utility",
+    "logger"
+  ]
 }

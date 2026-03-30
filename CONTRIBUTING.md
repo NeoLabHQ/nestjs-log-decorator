@@ -1,5 +1,7 @@
 # Contributing
 
+Thanks for your interest in contributing to this project! 🎉
+
 ## Development
 
 ### Quick Start
@@ -16,6 +18,12 @@ npm run dev
 
 ```bash
 npm run test
+```
+
+### Linting
+
+```bash
+npm run lint
 ```
 
 ### Building

@@ -32,7 +32,7 @@ TypeScript decorators that eliminate logging boilerplate from NestJS application
 - By default uses structured output
 - Prettifies Axios errors
 - Zero configuration
-- Zero dependencies
+- Minimal dependencies
 - Auto-injected logger (no need to define `logger` property)
 
 ## Installation
@@ -522,40 +522,6 @@ import { Log, NoLog, LogOptions, Loggable, isLoggable } from 'nestjs-log-decorat
 | `LogOptions` | Interface | Options for `@Log()` decorator |
 | `Loggable` | Interface | Interface for classes with a `logger` property (optional) |
 | `isLoggable` | Function | Type guard to check if instance has logger |
-
-### Generic Decorator Primitives
-
-The library also exports logger-agnostic decorator primitives for building custom decorators:
-
-```typescript
-import {
-  Effect,
-  EffectOnMethod,
-  EffectOnClass,
-  SetMeta,
-  getMeta,
-  setMeta,
-  EFFECT_APPLIED_KEY,
-  OnInvokeHook,
-  OnReturnHook,
-  OnErrorHook,
-  FinallyHook,
-} from 'nestjs-log-decorator';
-```
-
-| Export | Type | Description |
-|--------|------|-------------|
-| `Effect` | Decorator | Unified class+method decorator with lifecycle hooks |
-| `EffectOnMethod` | Decorator | Method decorator with lifecycle hooks |
-| `EffectOnClass` | Decorator | Class decorator that applies hooks to all methods |
-| `SetMeta` | Decorator | Store metadata on methods |
-| `getMeta` | Function | Retrieve metadata from methods |
-| `setMeta` | Function | Programmatically set metadata on functions |
-| `EFFECT_APPLIED_KEY` | Symbol | Key used to mark methods as already decorated |
-| `OnInvokeHook` | Decorator | Convenience hook for `onInvoke` |
-| `OnReturnHook` | Decorator | Convenience hook for `onReturn` |
-| `OnErrorHook` | Decorator | Convenience hook for `onError` |
-| `FinallyHook` | Decorator | Convenience hook for `finally` |
 
 ## Advanced Example
 
