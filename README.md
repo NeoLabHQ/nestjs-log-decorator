@@ -25,7 +25,7 @@ TypeScript decorators that eliminate logging boilerplate from NestJS application
 
 ## Description
 
-`@Log()` decorator replaces the try-catch logging pattern in NestJS service methods by automatically logging method invocation on return or error.
+`@Log()` decorator replaces the try-catch logging pattern in NestJS service methods by automatically logging method success and errors, with optional invocation and result logging.
 
 **Key Features**
 
@@ -101,6 +101,35 @@ const resultPromise = service.createUser('John');
 // [UserService] { method: 'createUser', state: 'invoked', args: { name: 'John' } }
 const result = await resultPromise;
 // [UserService] { method: 'createUser', state: 'success', args: { name: 'John' } }
+```
+
+### Result Logging
+
+If you want to include method results in success logs, use the `result` option.
+
+```typescript
+class UserService {
+  // Logs result as-is
+  @Log({ result: true })
+  findUser(id: number) {
+    return { id, name: 'John', email: 'john@example.com' };
+  }
+
+  // Logs formatted result
+  @Log({
+    result: (res: { id: number; name: string; email: string }) => ({ id: res.id, name: res.name }),
+  })
+  findPublicUser(id: number) {
+    return { id, name: 'John', email: 'john@example.com' };
+  }
+}
+```
+
+Example success output:
+
+```typescript
+// [UserService] { method: 'findUser', state: 'success', args: { id: 1 }, result: { id: 1, name: 'John', email: 'john@example.com' } }
+// [UserService] { method: 'findPublicUser', state: 'success', args: { id: 1 }, result: { id: 1, name: 'John' } }
 ```
 
 ### Complete Example
@@ -323,6 +352,31 @@ class SyncService {
 [SyncService] { method: 'lookupUser', state: 'success', args: '1:John' }
 ```
 
+### `result` — Success Result Logging
+
+Control how return values are included in success logs:
+
+- `result: true` logs the raw return value
+- `result: (value) => ...` logs a formatted value
+
+```typescript
+class PaymentService {
+  // Log full return value
+  @Log({ result: true })
+  createPayment(id: number) {
+    return { id, status: 'success', cardToken: 'tok_123' };
+  }
+
+  // Log only safe result fields
+  @Log({
+    result: (res: { id: number; status: string; cardToken: string }) => ({ id: res.id, status: res.status }),
+  })
+  createPaymentSafe(id: number) {
+    return { id, status: 'success', cardToken: 'tok_123' };
+  }
+}
+```
+
 ## Log Format
 
 All logs are structured JSON objects:
@@ -333,7 +387,9 @@ All logs are structured JSON objects:
 {
   method: 'methodName',
   state: 'success',
-  args: { param1: value1, param2: value2 }
+  args: { param1: value1, param2: value2 },
+  // Present only when `result` option is configured
+  result: { any: 'value' }
 }
 ```
 
@@ -447,6 +503,7 @@ Decorator that can be applied to classes or methods. When applied to a class, by
 |--------|------|---------|-------------|
 | `onInvoke` | `boolean` | `false` | Log method invocation before execution |
 | `args` | `(...args) => any` | `undefined` | Custom function to format logged arguments |
+| `result` | `true \| (result) => any` | `undefined` | Include and optionally format successful method result |
 
 ### `NoLog()`
 

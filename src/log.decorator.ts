@@ -1,6 +1,6 @@
 import { Effect, SetMeta } from './decorators';
 import { createLogWrapper } from './LogWrapper';
-import { type LogOptions, type LogArgsFormatter, NO_LOG_METADATA_KEY } from './types';
+import { type LogOptions, NO_LOG_METADATA_KEY } from './types';
 
 /**
  * Decorator function that can be applied to classes or methods.
@@ -43,7 +43,7 @@ interface LogDecorator {
  * **Log Format:**
  * All logs are output as structured objects with the following format:
  * - Invocation: `{ method: string, state: 'invoked', args: Record<string, any> }` (only when `onInvoke: true`)
- * - Success: `{ method: string, state: 'success', args: Record<string, any> }`
+ * - Success: `{ method: string, state: 'success', args: Record<string, any>, result?: unknown }`
  * - Error: `{ method: string, state: 'error', args: Record<string, any>, error: Error | PrettifiedAxiosError }`
  *
  * **Custom Argument Formatting:**
@@ -51,6 +51,11 @@ interface LogDecorator {
  * - Excluding large objects from logs
  * - Logging only specific arguments
  * - Transforming sensitive data before logging
+ *
+ * **Result Logging:**
+ * Use the `result` option to include successful return values in success logs.
+ * - `result: true` logs the raw returned value
+ * - `result: (value) => ...` logs a formatted value
  *
  * **Error Handling:**
  * - Axios errors are automatically prettified using `prettifyAxiosError` to provide structured error information
@@ -103,16 +108,24 @@ interface LogDecorator {
  * @param options - Configuration options for the decorator
  * @returns Decorator function that can be applied to classes or methods
  */
-export const Log = <TArgs extends unknown[]>({onInvoke: shouldLogInvoke = false, args: formatArgs}: LogOptions<TArgs> = {}): LogDecorator => 
+export const Log = <TArgs extends unknown[], TResult = unknown>({
+  onInvoke: shouldLogInvoke = false,
+  args: formatArgs,
+  result: formatResult,
+}: LogOptions<TArgs, TResult> = {}): LogDecorator => 
   Effect<unknown>(
     ({ args, argsObject, target, propertyKey, className }) => {
       const formattedArgs = formatArgs ? formatArgs(...(args as TArgs)) : argsObject;
-
+      const resultFormatter = typeof formatResult === 'function' ? formatResult : (value: TResult): TResult => value;
+      
       const logger = createLogWrapper(target, className, String(propertyKey), formattedArgs);
       
       return {
         onInvoke: shouldLogInvoke ? () => logger.invoked() : undefined,
-        onReturn: ({ result }) => { logger.success(); return result; },
+        onReturn: ({ result }) => {
+          logger.success(undefined, formatResult ? { result: resultFormatter(result as TResult) } : undefined);
+          return result;
+        },
         onError: ({ error }) => { logger.error(error); throw error; },
       };
     },

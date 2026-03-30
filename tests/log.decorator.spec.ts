@@ -84,6 +84,56 @@ describe('Log Decorator', () => {
       expect(result).toEqual({ id: 1, data: 'result' });
     });
 
+    it('should log raw result when result is true', () => {
+      const mockLogger = createMockLogger();
+
+      class TestService {
+        readonly logger = mockLogger as unknown as Logger;
+
+        @Log({ result: true })
+        loadData(id: number) {
+          return { id, data: 'result' };
+        }
+      }
+
+      const service = new TestService();
+      const result = service.loadData(1);
+
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'loadData',
+        state: 'success',
+        args: { id: 1 },
+        result: { id: 1, data: 'result' },
+      });
+      expect(result).toEqual({ id: 1, data: 'result' });
+    });
+
+    it('should log formatted result when result formatter is provided', () => {
+      const mockLogger = createMockLogger();
+
+      class TestService {
+        readonly logger = mockLogger as unknown as Logger;
+
+        @Log<[number], { id: number; data: string }>({
+          result: (res) => ({ id: res.id }),
+        })
+        loadData(id: number) {
+          return { id, data: 'result' };
+        }
+      }
+
+      const service = new TestService();
+      const result = service.loadData(1);
+
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'loadData',
+        state: 'success',
+        args: { id: 1 },
+        result: { id: 1 },
+      });
+      expect(result).toEqual({ id: 1, data: 'result' });
+    });
+
     it('should log error when method throws', () => {
       const mockLogger = createMockLogger();
 
@@ -216,6 +266,32 @@ describe('Log Decorator', () => {
         method: 'loadData',
         state: 'success',
         args: { id: 1 },
+      });
+      expect(result).toEqual({ id: 1, data: 'result' });
+    });
+
+    it('should log formatted async result when result formatter is provided', async () => {
+      const mockLogger = createMockLogger();
+
+      class TestService {
+        readonly logger = mockLogger as unknown as Logger;
+
+        @Log<[number], { id: number; data: string }>({
+          result: (res) => ({ id: res.id }),
+        })
+        async loadData(id: number) {
+          return await Promise.resolve({ id, data: 'result' });
+        }
+      }
+
+      const service = new TestService();
+      const result = await service.loadData(1);
+
+      expect(mockLogger.log).toHaveBeenCalledWith({
+        method: 'loadData',
+        state: 'success',
+        args: { id: 1 },
+        result: { id: 1 },
       });
       expect(result).toEqual({ id: 1, data: 'result' });
     });

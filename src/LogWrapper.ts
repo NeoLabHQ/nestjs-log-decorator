@@ -22,12 +22,13 @@ export class LogWrapper {
     });
   }
 
-  success(message?: string): void {
+  success(message?: string, additionalFields: Record<string, unknown> = {}): void {
     this.logger.log({
       method: this.method,
       state: 'success',
       args: this.args,
       ...(message ? { message } : {}),
+      ...additionalFields,
     });
   }
 

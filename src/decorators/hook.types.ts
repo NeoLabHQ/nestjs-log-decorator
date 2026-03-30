@@ -10,20 +10,20 @@ export type HookArgs = Record<string, unknown> | undefined;
  * runtime class name.
  */
 export interface HookContext {
-  /** Pre-built args object mapping parameter names to their values. */
-  argsObject: HookArgs;
   /** Raw arguments array passed to the method. */
   args: unknown[];
+  /** Pre-built args object mapping parameter names to their values. */
+  argsObject: HookArgs;
   /** The `this` target object (class instance). */
   target: object;
   /** The property key of the decorated method. */
   propertyKey: string | symbol;
-  /** The property descriptor of the decorated method. */
-  descriptor: PropertyDescriptor;
   /** Parameter names extracted from the original function signature. */
   parameterNames: string[];
   /** Runtime class name derived from `this.constructor.name`. */
   className: string;
+  /** The property descriptor of the decorated method. */
+  descriptor: PropertyDescriptor;
 }
 
 /** Context for the onReturn hook, adding the method result. */
