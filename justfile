@@ -34,6 +34,29 @@ _sandbox-id:
     @docker ps --filter "label=devcontainer.local_folder={{justfile_directory()}}" --format "{{{{.ID}}" | head -n1
 
 [doc("""
+  Generate fly.toml for a target environment.
+
+  Description:
+    Merge .flyenv/<env>.toml and fly.template.toml into fly.toml.
+
+    The generated fly.toml is gitignored — only the template and overrides
+    are tracked in version control.
+
+    if tomlq not avaiable, install it using `pip install yq`
+
+  Parameters:
+    env - Target environment name. Must match a file in .flyenv/ (e.g. dev, prod).
+
+  Usage:
+    just fly-config dev
+    just fly-config prod
+""")]
+fly-config env:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tomlq -t -s '.[0] * .[1]' fly.template.toml .flyenv/{{env}}.toml > fly.toml
+
+[doc("""
   Start devcontainer and open an interactive shell.
 
   Description:
@@ -181,7 +204,7 @@ claude prompt label="claude":
 claude-add-task prompt:
     #!/usr/bin/env bash
     set -euo pipefail
-    just claude "/sdd:add-task {{ prompt }}"
+    just claude "/add-task {{ prompt }}"
 
 [doc("""
   Run claude in JSON output mode with optional schema validation.
@@ -267,8 +290,8 @@ claude-plan-and-implement task-filename mode="":
     elif [ "$MODE" = "continue-plan" ]; then
       echo "==> Step 1: Continuing planning with --continue"
       run_plan_or_implement_retry "plan" \
-        "/sdd:plan --continue $TASK_FILENAME start from judge review of last completed stage" \
-        "/sdd:plan --continue $TASK_FILENAME start from judge review of last completed stage"
+        "/plan-task --continue $TASK_FILENAME start from judge review of last completed stage" \
+        "/plan-task --continue $TASK_FILENAME start from judge review of last completed stage"
       echo ""
 
       if [ ! -f "$todo_path" ]; then
@@ -281,8 +304,8 @@ claude-plan-and-implement task-filename mode="":
     elif [ -f "$draft_path" ]; then
       echo "==> Step 1: Planning task from draft"
       run_plan_or_implement_retry "plan" \
-        "/sdd:plan @$draft_path" \
-        "/sdd:plan --continue $TASK_FILENAME start from judge review of last completed stage"
+        "/plan-task @$draft_path" \
+        "/plan-task --continue $TASK_FILENAME start from judge review of last completed stage"
       echo ""
 
       if [ ! -f "$todo_path" ]; then
@@ -306,15 +329,15 @@ claude-plan-and-implement task-filename mode="":
     else
       # Determine initial prompt based on mode
       if [ "$MODE" = "continue-implement" ]; then
-        initial_prompt="/sdd:implement --continue $TASK_FILENAME start from judge review of last completed stage"
+        initial_prompt="/implement-task --continue $TASK_FILENAME start from judge review of last completed stage"
         echo ""
         echo "==> Step 2: Continuing implementation with --continue"
       else
-        initial_prompt="/sdd:implement @$todo_path"
+        initial_prompt="/implement-task @$todo_path"
         echo ""
         echo "==> Step 2: Implementing task"
       fi
-      continue_prompt="/sdd:implement --continue $TASK_FILENAME start from judge review of last completed stage"
+      continue_prompt="/implement-task --continue $TASK_FILENAME start from judge review of last completed stage"
 
       # Retry loop: attempt implementation until done_path exists or max retries
       implement_attempt=0
@@ -365,8 +388,8 @@ claude-plan-and-implement task-filename mode="":
       echo "==> Step 4: Retrying implementation with --continue"
 
       run_plan_or_implement_retry "implement-retry" \
-        "/sdd:implement --continue $TASK_FILENAME start from judge review of last completed stage" \
-        "/sdd:implement --continue $TASK_FILENAME start from judge review of last completed stage"
+        "/implement-task --continue $TASK_FILENAME start from judge review of last completed stage" \
+        "/implement-task --continue $TASK_FILENAME start from judge review of last completed stage"
       echo ""
 
       # Re-verify after retry
@@ -426,7 +449,7 @@ claude-fix-lint-and-test:
       fi
 
       echo "WARN: Lint or test failed. Launching claude to fix (fix attempt $lt_attempt/3)..."
-      fix_prompt="/sadd:do-and-judge This codebase was recently integrated with new functionality. But bun run lint or bun run test fails. Fix the codebase, iterate till bun run lint and bun run test pass. Do not break old and newly added functionality! Do not remove or change it, unless it is obviously a bug!"
+      fix_prompt="/do-and-judge This codebase was recently integrated with new functionality. But bun run lint or bun run test fails. Fix the codebase, iterate till bun run lint and bun run test pass. Do not break old and newly added functionality! Do not remove or change it, unless it is obviously a bug!"
       just claude "$fix_prompt" "lint-test-fix-$lt_attempt"
       echo ""
     done
@@ -465,7 +488,7 @@ claude-review-and-fix:
 
     review_pass=false
     for review_attempt in 1 2 3; do
-      review_output=$(just claude-json "/code-review:review-local-changes --json" "" "code-review-$review_attempt")
+      review_output=$(just claude-json "/review-local-changes --json" "" "code-review-$review_attempt")
 
       # Extract critical and high issue counts
       critical_count=$(extract_structured_field "$review_output" "summary.critical" "0")
@@ -487,7 +510,7 @@ claude-review-and-fix:
       fi
 
       echo "WARN: Found critical=$critical_count high=$high_count issues. Launching claude to fix (fix attempt $review_attempt/3)..."
-      fix_review_prompt="/sadd:do-and-judge The code review found critical or high severity issues in the local changes. Fix all critical and high issues. Do not break existing functionality!"
+      fix_review_prompt="/do-and-judge The code review found critical or high severity issues in the local changes. Fix all critical and high issues. Do not break existing functionality!"
       just claude "$fix_review_prompt" "review-fix-$review_attempt"
       echo ""
     done
@@ -750,14 +773,14 @@ claude-fix-pr-comments mode="":
       echo "==> Step 2: Skipped (mode=continue-fix)"
     else
       echo "==> Step 2: Combining PR comments"
-      combine_prompt="/sadd:do-and-judge Analyze and combine related comments or comments that impossible to do in parallel in @.specs/comments/ into a multiple md files. Avoid rewriting them, just combine text, avoid summarising. If there any nitpicks or one line changes, combine them in one aggregation also. Try to keep amount of files no more than 5, but do not combine too much unrelated changes! Each of them will be done by separate, parllel agents. As a result they should have own focused task to produce good result. After combining, delete old files that no longer relevant. CRITICAL: do not left comments folder in intermidiate state, when there are both combined files and their original copies!"
+      combine_prompt="/do-and-judge Analyze and combine related comments or comments that impossible to do in parallel in @.specs/comments/ into a multiple md files. Avoid rewriting them, just combine text, avoid summarising. If there any nitpicks or one line changes, combine them in one aggregation also. Try to keep amount of files no more than 5, but do not combine too much unrelated changes! Each of them will be done by separate, parllel agents. As a result they should have own focused task to produce good result. After combining, delete old files that no longer relevant. CRITICAL: do not left comments folder in intermidiate state, when there are both combined files and their original copies!"
       just claude "$combine_prompt" "combine-pr-comments"
       echo ""
     fi
 
     # ── Step 3: Fix comments ────────────────────────────────────────
     echo "==> Step 3: Fixing PR comments"
-    fix_prompt="/sadd:do-in-parallel launch agents to fix all comments in @.specs/comments/ in parallel"
+    fix_prompt="/do-in-parallel launch agents to fix all comments in @.specs/comments/ in parallel"
     just claude "$fix_prompt" "fix-pr-comments"
     echo ""
 
